@@ -5,13 +5,13 @@
 -----
 > نام و آدرس پست الکترونیکی اعضای گروه را در این قسمت بنویسید.
 
-نام و نام خانوادگی <example@example.com>
+پارسا محمدیان <parsa2820@gmail.com>
 
-نام و نام خانوادگی <example@example.com> 
+آرین یزدانپرست <arian.expert@gmail.com>
 
-نام و نام خانوادگی <example@example.com> 
+سارا آذرنوش <azarnooshsa@gmail.com> 
 
-نام و نام خانوادگی <example@example.com> 
+کسری امانی <kasra138079@gmail.com>
 
 مقدمات
 ----------
@@ -28,12 +28,18 @@
 ## یافتن دستور معیوب
 
 ۱.
+0xc0000008
 
 ۲.
+0x8048757
 
-۳.
+۳. 
+Command: objdump -d do-nothing
+Function: _start
+Instruction: mov    0x24(%esp),%eax
 
 ۴.
+
 
 ۵.
 
