@@ -1,2 +1,4 @@
 .commit_suffix
 .vsls.json
+.vscode
+o.txt
