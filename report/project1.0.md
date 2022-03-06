@@ -110,12 +110,43 @@ run_actions (argv);
 ```
 
 ۸.
+```
+pintos-debug: dumplist #0: 0xc000e000 {tid = 1, status = THREAD_BLOCKED, name = "main", '\000' <repeats 11 times>, stack = 0xc000eeac "\001", priority = 31, allelem = {prev = 0xc0035910 <all_list>, next = 0xc0104020}, elem = {prev = 0xc0037314 <temporary+4>, next = 0xc003731c <temporary+12>}, pagedir = 0x0, magic = 3446325067}
+pintos-debug: dumplist #1: 0xc0104000 {tid = 2, status = THREAD_BLOCKED, name = "idle", '\000' <repeats 11 times>, stack = 0xc0104f34 "", priority = 0, allelem = {prev = 0xc000e020, next = 0xc010a020}, elem = {prev = 0xc0035920 <ready_list>, next = 0xc0035928 <ready_list+8>}, pagedir = 0x0, magic = 3446325067}
+pintos-debug: dumplist #2: 0xc010a000 {tid = 3, status = THREAD_RUNNING, name = "do-nothing\000\000\000\000\000", stack = 0xc010afd4 "", priority = 31, allelem = {prev = 0xc0104020, next = 0xc0035918 <all_list+8>}, elem = {prev = 0xc0035920 <ready_list>, next = 0xc0035928 <ready_list+8>}, pagedir = 0x0, magic = 3446325067}
+```
 
 ۹.
+```
+tid_t
+process_execute (const char *file_name)
+{
+  char *fn_copy;
+  tid_t tid;
+
+  sema_init (&temporary, 0);
+  /* Make a copy of FILE_NAME.
+     Otherwise there's a race between the caller and load(). */
+  fn_copy = palloc_get_page (0);
+  if (fn_copy == NULL)
+    return TID_ERROR;
+  strlcpy (fn_copy, file_name, PGSIZE);
+
+  /* Create a new thread to execute FILE_NAME. */
+  tid = thread_create (file_name, PRI_DEFAULT, start_process, fn_copy);
+  if (tid == TID_ERROR)
+    palloc_free_page (fn_copy);
+  return tid;
+}
+```
 
 ۱۰.
+```
+{edi = 0, esi = 0, ebp = 0, esp_dummy = 0, ebx = 0, edx = 0, ecx = 0, eax = 0, gs = 35, fs = 35, es = 35, ds = 35, vec_no = 0, error_code = 0, frame_pointer = 0x0, eip = 0x8048754, cs = 27, eflags = 514, esp = 0xc0000000, ss = 35}
+```
 
 ۱۱.
+
 
 ۱۲.
 
