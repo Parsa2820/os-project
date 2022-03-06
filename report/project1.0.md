@@ -147,15 +147,47 @@ process_execute (const char *file_name)
 
 ۱۱.
 
+In order to run the user's code, an interrupt must be given to the operating system, and therefore this interrupt is thrown in this function so that the user's code can be executed. At the beginning of the function, the registers are given correct values, and after that, the user's code is loaded in the created frame. In the end, the simulation of an interrupt is completed via calling the "intr_exit" function. The function ends with the execution of the user's code, and this means we return to the "userspace."
+<!-- برای اجرای کد کاربر نیاز است که وقفه‌ای به سیستم‌ عامل داده شود به همین دلیل  در این تابع وقفه‌ی مورد نظر شبیه‌سازی شده است تا اجرای کد کاربر صورت بگیرد. در ابتدای تابع رجیستر‌ها به صورت صحیح مقدار دهی شده‌اند و در ادامه، کد کاربر در فریم ساخته شده لود شده است. در انتها با فراخوانی تابع 
+intr_exit
+با فریم ساخته شده فراخوانی شده که شبیه‌سازی وقفه را تکمیل می‌کند. در انتهای این تابع اجرای کد کاربر صورت می‌گیرد که به معنای انتقال به 
+user space
+است.،  -->
+
+<!-- #TODO
+در زمان اجرای کد کاربر این وقفه اتفاق افتاده که برای برگشت از ادامه‌ی اجرای آن کد برگردد -->
 
 ۱۲.
+```
+info registers
+eax            0x0      0
+ecx            0x0      0
+edx            0x0      0
+ebx            0x0      0
+esp            0xc0000000       0xc0000000
+ebp            0x0      0x0
+esi            0x0      0
+edi            0x0      0
+eip            0x8048754        0x8048754
+eflags         0x202    [ IF ]
+cs             0x1b     27
+ss             0x23     35
+ds             0x23     35
+es             0x23     35
+fs             0x23     35
+gs             0x23     35
+```
+As expected, these values are equal to values in question 10.
 
 ۱۳.
-
+```
+#0  _start (argc=<unavailable>, argv=<unavailable>) at ../../lib/user/entry.c:9
+```
 
 ## دیباگ
 
 ۱۴.
+
 
 ۱۵.
 
