@@ -217,13 +217,16 @@ $2 = 162
 As we can see they are equal with those values which were on top of the stack in previous question.
 
 ۱۸.
-```
-int process_wait(tid_t child_tid UNUSED)
+```c
+int
+process_wait (tid_t child_tid UNUSED)
 {
-  sema_down(&temporary);
+  sema_down (&temporary);
   return 0;
 }
 ```
+As we can see the corresponding `sema_down` is in the `process_wait` function. If we search for the initial value of the `temporary` semaphore, we can see that it is equal to 0 (`sema_init` function is called with `value=0` in the `process_execute` function). This imply that only one user program can be executed at a time. So `process_wait` wait for the `temporary` semaphore to be released or in other words, it waits for the user program to finish.
+
 
 ۱۹.
 ```
