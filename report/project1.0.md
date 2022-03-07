@@ -282,16 +282,7 @@ process_execute (const char *file_name)
 
 ۱۱.
 
-In order to run the user's code, an interrupt must be given to the operating system, and therefore this interrupt is thrown in this function so that the user's code can be executed. At the beginning of the function, the registers are given correct values, and after that, the user's code is loaded in the created frame. In the end, the simulation of an interrupt is completed via calling the "intr_exit" function. The function ends with the execution of the user's code, and this means we return to the "userspace."
-<!-- برای اجرای کد کاربر نیاز است که وقفه‌ای به سیستم‌ عامل داده شود به همین دلیل  در این تابع وقفه‌ی مورد نظر شبیه‌سازی شده است تا اجرای کد کاربر صورت بگیرد. در ابتدای تابع رجیستر‌ها به صورت صحیح مقدار دهی شده‌اند و در ادامه، کد کاربر در فریم ساخته شده لود شده است. در انتها با فراخوانی تابع 
-intr_exit
-با فریم ساخته شده فراخوانی شده که شبیه‌سازی وقفه را تکمیل می‌کند. در انتهای این تابع اجرای کد کاربر صورت می‌گیرد که به معنای انتقال به 
-user space
-است.،  -->
-
-<!-- #TODO
-در زمان اجرای کد کاربر این وقفه اتفاق افتاده که برای برگشت از ادامه‌ی اجرای آن کد برگردد -->
-
+In order to run the user's code (context switch), an interrupt must be given to the operating system, and therefore this interrupt is simulated in this function so that the user's code can be executed. At the beginning of the function, the registers are given specific values, and after that, the user's code is loaded in the created frame. In the end, the simulation of an interrupt is completed via calling the `intr_exit` function. The function ends with the execution of the user's code, and this means we return to the "user space". After the user's code execution, control is returned to where the interrupt was simulated.
 
 ۱۲.
 ```
@@ -320,9 +311,7 @@ As expected, these values are equal to the ones of question 10.
 #0  _start (argc=<unavailable>, argv=<unavailable>) at ../../lib/user/entry.c:9
 ```
 
-
 ## دیباگ
-
 
 ۱۴.
 It is clear that there is an issue with the stack; Therefore we must seek it in the `start_process` function. 
@@ -370,13 +359,13 @@ process_wait (tid_t child_tid UNUSED)
 ```
 As we can see the corresponding `sema_down` is in the `process_wait` function. If we search for the initial value of the `temporary` semaphore, we can see that it is equal to 0 (`sema_init` function is called with `value=0` in the `process_execute` function). This imply that only one user program can be executed at a time. So `process_wait` wait for the `temporary` semaphore to be released or in other words, it waits for the user program to finish.
 
-
 ۱۹.
 ```
   Id   Target Id         Frame
 * 1    Thread <main>     sema_down (sema=sema@entry=0xc00372fc <console_lock+4>) at ../../threads/synch.c:62
 ```
 ```
+Name: main
 Address: 0xc000e000
 ```
 ```
