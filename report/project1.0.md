@@ -323,18 +323,22 @@ It is clear that there is an issue with the stack; Therefore we must seek it in 
 An error was given because the user code wanted to access a block of memory that was not allowed. Here, by adding the space required to stack (since stack pointer in downward, 0x24 is subtracted form esp), the user code will be allowed to access that block which contains the parameters of the function.
 
 ۱۵.
-
-> The point of this is that there are some "SIMD" (Single Instruction, Multiple Data) instructions (also known in x86-land as "SSE" for "Streaming SIMD Extensions") which can perform parallel operations on multiple words in memory, but require those multiple words to be a block starting at an address which is a multiple of 16 bytes.
-[reference](https://stackoverflow.com/questions/4175281/what-does-it-mean-to-align-the-stack)
-
 ```perl
 do-stack-align: exit(12)
 ```
-This line indicates that the return value of the function must be 12. Which means `esp % 16` must be equal to 12.
-
-
-
-
+This line indicates that the return value of the function must be 12. Which means `esp % 16` must be equal to 12. Since `esp` initial value is `PHYS_BASE - INIT_STACK_SIZE`, we can see that the equation is satisfied.
+```c
+#define LOADER_PHYS_BASE 0xc0000000     /* 3 GB. */
+#define	PHYS_BASE ((void *) LOADER_PHYS_BASE)
+#define INIT_STACK_SIZE 0x24
+*esp = PHYS_BASE - INIT_STACK_SIZE;
+```
+```
+*esp = 0xc0000000 - 0x24
+*esp = 0xBFFFFFDC
+*esp = 3221225436
+*esp % 16 = 3221225436 % 16 = 12
+```
 
 ۱۶.
 ```
