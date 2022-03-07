@@ -28,12 +28,12 @@
 ## یافتن دستور معیوب
 
 ۱.
-```
+```c
 0xc0000008
 ```
 
 ۲.
-```
+```c
 0x8048757
 ```
 
@@ -52,9 +52,19 @@ pintos/src/lib/user/user.lds:3:ENTRY(_start)
 pintos/src/lib/user/entry.c:4:void _start (int argc, char *argv[]);
 pintos/src/lib/user/entry.c:7:_start (int argc, char *argv[])
 ```
+
 First result (`user.lds`) is linker script file which does not contain `_start` function definition. So the definition is in `entry.c` file. 
 
+```c
+void
+_start (int argc, char *argv[])
+{
+  exit (main (argc, argv));
+}
+```
+
 **`objdump` assembly notation is slightly different from x86 assembly. For example in `mov` instruction, first operand is source and the second one is destination.**
+
 ```
 08048754 <_start>:
  Instruction: 8048754:	83 ec 1c             	sub    $0x1c,%esp
@@ -76,7 +86,8 @@ First result (`user.lds`) is linker script file which does not contain `_start` 
 ```
 
 ۵.
-In question 3 instruction, we are trying to access parameters which passed to us by `_start` function caller (actually pushed to stack). Probably caller does not pass parameters properly. So when we try to access them, we get error. 
+
+In question 3 instruction, we are trying to access parameters which passed to us by `_start` function caller (actually pushed to stack). Probably caller does not pass parameters properly, or the caller does not alter the stack pointer appropriately. So when we try to access them, we get an error.
 
 ## به سوی crash
 
@@ -84,17 +95,15 @@ In question 3 instruction, we are trying to access parameters which passed to us
 ```
   Id   Target Id         Frame
 * 1    Thread <main>     process_execute (file_name=file_name@entry=0xc0007d50 "do-nothing") at ../../userprog/process.c:32
+```
+```
+Name: main
 Address: 0xc000e000
 ```
 ```
-pintos-debug: dumplist #0: 0xc000e000 {tid = 1, status = THREAD_RUNNING, name = "main", '\000' <repeats 11 times>, stack = 0xc000edec <incomple
-te sequence \357>, priority = 31, allelem = {prev = 0xc0035910 <all_list>, next = 0xc0104020}, elem = {prev = 0xc0035920 <ready_list>, next = 0
-xc0035928 <ready_list+8>}, pagedir = 0x0, magic = 3446325067}
-pintos-debug: dumplist #1: 0xc0104000 {tid = 2, status = THREAD_BLOCKED, name = "idle", '\000' <repeats 11 times>, stack = 0xc0104f34 "", prior
-ity = 0, allelem = {prev = 0xc000e020, next = 0xc0035918 <all_list+8>}, elem = {prev = 0xc0035920 <ready_list>, next = 0xc0035928 <ready_list+8
->}, pagedir = 0x0, magic = 3446325067}
+(gdb) dumplist &all_list thread allelem
+pintos-debug: dumplist #0: 0xc000e000 {tid = 1, status = THREAD_RUNNING, name = "main", '\000' <repeats 11 times>, stack = 0xc000edec <incomplete sequence \357>, priority = 31, allelem = {prev = 0xc0035910 <all_list>, next = 0xc0104020}, elem = {prev = 0xc0035920 <ready_list>, next = 0xc0035928 <ready_list+8>}, pagedir = 0x0, magic = 3446325067}pintos-debug: dumplist #1: 0xc0104000 {tid = 2, status = THREAD_BLOCKED, name = "idle", '\000' <repeats 11 times>, stack = 0xc0104f34 "", priority = 0, allelem = {prev = 0xc000e020, next = 0xc0035918 <all_list+8>}, elem = {prev = 0xc0035920 <ready_list>, next = 0xc0035928 <ready_list+8>}, pagedir = 0x0, magic = 3446325067}
 ```
-
 ۷.
 ```
 #0  process_execute (file_name=file_name@entry=0xc0007d50 "do-nothing") at ../../userprog/process.c:32
@@ -102,14 +111,140 @@ ity = 0, allelem = {prev = 0xc000e020, next = 0xc0035918 <all_list+8>}, elem = {
 #2  0xc0020921 in run_actions (argv=0xc00357cc <argv+12>) at ../../threads/init.c:340
 #3  main () at ../../threads/init.c:133
 ```
+```c
+int
+main (void)
+{
+  char **argv;
+
+  /* Clear BSS. */
+  bss_init ();
+
+  /* Break command line into arguments and parse options. */
+  argv = read_command_line ();
+  argv = parse_options (argv);
+
+  /* Initialize ourselves as a thread so we can use locks,
+     then enable console locking. */
+  thread_init ();
+  console_init ();
+
+  /* Greet user. */
+  printf ("Pintos booting with %'"PRIu32" kB RAM...\n",
+          init_ram_pages * PGSIZE / 1024);
+
+  /* Initialize memory system. */
+  palloc_init (user_page_limit);
+  malloc_init ();
+  paging_init ();
+
+  /* Segmentation. */
+#ifdef USERPROG
+  tss_init ();
+  gdt_init ();
+#endif
+
+  /* Initialize interrupt handlers. */
+  intr_init ();
+  timer_init ();
+  kbd_init ();
+  input_init ();
+#ifdef USERPROG
+  exception_init ();
+  syscall_init ();
+#endif
+
+  /* Start thread scheduler and enable interrupts. */
+  thread_start ();
+  serial_init_queue ();
+  timer_calibrate ();
+
+#ifdef FILESYS
+  /* Initialize file system. */
+  ide_init ();
+  locate_block_devices ();
+  filesys_init (format_filesys);
+#endif
+
+  printf ("Boot complete.\n");
+
+  /* Run actions specified on kernel command line. */
+  run_actions (argv); /* This line is the function call */
+
+  /* Finish up. */
+  shutdown ();
+  thread_exit ();
+}
 ```
-sema_init (&temporary, 0);
-process_wait (process_execute (task));
-a->function (argv);
-run_actions (argv);
+```c
+static void
+run_actions (char **argv)
+{
+  /* An action. */
+  struct action
+    {
+      char *name;                       /* Action name. */
+      int argc;                         /* # of args, including action name. */
+      void (*function) (char **argv);   /* Function to execute action. */
+    };
+
+  /* Table of supported actions. */
+  static const struct action actions[] =
+    {
+      {"run", 2, run_task},
+#ifdef FILESYS
+      {"ls", 1, fsutil_ls},
+      {"cat", 2, fsutil_cat},
+      {"rm", 2, fsutil_rm},
+      {"extract", 1, fsutil_extract},
+      {"append", 2, fsutil_append},
+#endif
+      {NULL, 0, NULL},
+    };
+
+  while (*argv != NULL)
+    {
+      const struct action *a;
+      int i;
+
+      /* Find action name. */
+      for (a = actions; ; a++)
+        if (a->name == NULL)
+          PANIC ("unknown action `%s' (use -h for help)", *argv);
+        else if (!strcmp (*argv, a->name))
+          break;
+
+      /* Check for required arguments. */
+      for (i = 1; i < a->argc; i++)
+        if (argv[i] == NULL)
+          PANIC ("action `%s' requires %d argument(s)", *argv, a->argc - 1);
+
+      /* Invoke action and advance. */
+      a->function (argv); /* This line is the function call */
+      argv += a->argc;
+    }
+
+}
+```
+```c
+static void
+run_task (char **argv)
+{
+  const char *task = argv[1];
+
+  printf ("Executing '%s':\n", task);
+#ifdef USERPROG
+  process_wait (process_execute (task)); /* This line is the function call */
+#else
+  run_test (task);
+#endif
+  printf ("Execution of '%s' complete.\n", task);
+}
 ```
 
 ۸.
+
+Threads `idle` and `do-nothing` are exist in the OS too.
 ```
 pintos-debug: dumplist #0: 0xc000e000 {tid = 1, status = THREAD_BLOCKED, name = "main", '\000' <repeats 11 times>, stack = 0xc000eeac "\001", priority = 31, allelem = {prev = 0xc0035910 <all_list>, next = 0xc0104020}, elem = {prev = 0xc0037314 <temporary+4>, next = 0xc003731c <temporary+12>}, pagedir = 0x0, magic = 3446325067}
 pintos-debug: dumplist #1: 0xc0104000 {tid = 2, status = THREAD_BLOCKED, name = "idle", '\000' <repeats 11 times>, stack = 0xc0104f34 "", priority = 0, allelem = {prev = 0xc000e020, next = 0xc010a020}, elem = {prev = 0xc0035920 <ready_list>, next = 0xc0035928 <ready_list+8>}, pagedir = 0x0, magic = 3446325067}
@@ -117,7 +252,7 @@ pintos-debug: dumplist #2: 0xc010a000 {tid = 3, status = THREAD_RUNNING, name = 
 ```
 
 ۹.
-```
+```c
 tid_t
 process_execute (const char *file_name)
 {
@@ -232,8 +367,11 @@ As we can see the corresponding `sema_down` is in the `process_wait` function. I
 ```
   Id   Target Id         Frame
 * 1    Thread <main>     sema_down (sema=sema@entry=0xc00372fc <console_lock+4>) at ../../threads/synch.c:62
-Address:
-0xc000e000
+```
+```
+Address: 0xc000e000
+```
+```
 All threads:
 pintos-debug: dumplist #0: 0xc000e000 {tid = 1, status = THREAD_RUNNING, name = "main", '\000' <repeats 11 times>, stack = 0xc000eeac "\001", priority = 31, allelem = {prev = 0xc0035910 <all_list>, next = 0xc0104020}, elem = {prev = 0xc0035920 <ready_list>, next = 0xc0035928 <ready_list+8>}, pagedir = 0x0, magic = 3446325067}
 pintos-debug: dumplist #1: 0xc0104000 {tid = 2, status = THREAD_BLOCKED, name = "idle", '\000' <repeats 11 times>, stack = 0xc0104f34 "", priority = 0, allelem = {prev = 0xc000e020, next = 0xc0035918 <all_list+8>}, elem = {prev = 0xc0035920 <ready_list>, next = 0xc0035928 <ready_list+8>}, pagedir = 0x0, magic = 3446325067}
