@@ -12,6 +12,10 @@
    Must be aligned on a 4 MB boundary. */
 #define LOADER_PHYS_BASE 0xc0000000     /* 3 GB. */
 
+/* Initial stack size for loading a user program.
+   4 bytes for argc, 4 bytes for argv, 26 byte idk. */
+#define INIT_STACK_SIZE 0x24
+
 /* Important loader physical addresses. */
 #define LOADER_SIG (LOADER_END - LOADER_SIG_LEN)   /* 0xaa55 BIOS signature. */
 #define LOADER_PARTS (LOADER_SIG - LOADER_PARTS_LEN)     /* Partition table. */

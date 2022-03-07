@@ -187,9 +187,20 @@ As expected, these values are equal to values in question 10.
 ## دیباگ
 
 ۱۴.
-
+Surely we have problem with the stack. So we have to search for the problem before in the `start_process` function. 
 
 ۱۵.
+
+> The point of this is that there are some "SIMD" (Single Instruction, Multiple Data) instructions (also known in x86-land as "SSE" for "Streaming SIMD Extensions") which can perform parallel operations on multiple words in memory, but require those multiple words to be a block starting at an address which is a multiple of 16 bytes.
+[reference](https://stackoverflow.com/questions/4175281/what-does-it-mean-to-align-the-stack)
+
+```perl
+do-stack-align: exit(12)
+```
+This line indicates that the return value of the function must be 12. Which means `esp % 16` must be equal to 12.
+
+
+
 
 ۱۶.
 
