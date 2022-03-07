@@ -315,10 +315,12 @@ As expected, these values are equal to the ones of question 10.
 
 ۱۴.
 It is clear that there is an issue with the stack; Therefore we must seek it in the `start_process` function. 
+```c
+#define INIT_STACK_SIZE 0x24
+// ...
+*esp = PHYS_BASE - INIT_STACK_SIZE;
 ```
-*esp = PHYS_BASE - INIT_STACK_SIZE(0x24);
-```
-An error was given because the user code wanted to access a block of memory that was not allowed. Here, by adding the space required to stack (since stack pointer in downward, 0x24 is subtracted form esp), the user code will be allowed to access that block.
+An error was given because the user code wanted to access a block of memory that was not allowed. Here, by adding the space required to stack (since stack pointer in downward, 0x24 is subtracted form esp), the user code will be allowed to access that block which contains the parameters of the function.
 
 ۱۵.
 
