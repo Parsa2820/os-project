@@ -203,9 +203,35 @@ This line indicates that the return value of the function must be 12. Which mean
 
 
 ۱۶.
+```
+0xbfffff98:     0x00000001      0x000000a2
+```
 
 ۱۷.
+```
+(gdb) print args[0]
+$1 = 1
+(gdb) print args[1]
+$2 = 162
+```
+As we can see they are equal with those values which were on top of the stack in previous question.
 
 ۱۸.
+```
+int process_wait(tid_t child_tid UNUSED)
+{
+  sema_down(&temporary);
+  return 0;
+}
+```
 
 ۱۹.
+```
+  Id   Target Id         Frame
+* 1    Thread <main>     sema_down (sema=sema@entry=0xc00372fc <console_lock+4>) at ../../threads/synch.c:62
+Address:
+0xc000e000
+All threads:
+pintos-debug: dumplist #0: 0xc000e000 {tid = 1, status = THREAD_RUNNING, name = "main", '\000' <repeats 11 times>, stack = 0xc000eeac "\001", priority = 31, allelem = {prev = 0xc0035910 <all_list>, next = 0xc0104020}, elem = {prev = 0xc0035920 <ready_list>, next = 0xc0035928 <ready_list+8>}, pagedir = 0x0, magic = 3446325067}
+pintos-debug: dumplist #1: 0xc0104000 {tid = 2, status = THREAD_BLOCKED, name = "idle", '\000' <repeats 11 times>, stack = 0xc0104f34 "", priority = 0, allelem = {prev = 0xc000e020, next = 0xc0035918 <all_list+8>}, elem = {prev = 0xc0035920 <ready_list>, next = 0xc0035928 <ready_list+8>}, pagedir = 0x0, magic = 3446325067}
+```
