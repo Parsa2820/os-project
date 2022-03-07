@@ -157,6 +157,7 @@ user space
 <!-- #TODO
 در زمان اجرای کد کاربر این وقفه اتفاق افتاده که برای برگشت از ادامه‌ی اجرای آن کد برگردد -->
 
+
 ۱۲.
 ```
 info registers
@@ -177,17 +178,23 @@ es             0x23     35
 fs             0x23     35
 gs             0x23     35
 ```
-As expected, these values are equal to values in question 10.
+As expected, these values are equal to the ones of question 10.
 
 ۱۳.
 ```
 #0  _start (argc=<unavailable>, argv=<unavailable>) at ../../lib/user/entry.c:9
 ```
 
+
 ## دیباگ
 
+
 ۱۴.
-Surely we have problem with the stack. So we have to search for the problem before in the `start_process` function. 
+It is clear that there is an issue with the stack; Therefore we must seek it in the `start_process` function. 
+```
+*esp = PHYS_BASE - INIT_STACK_SIZE(0x24);
+```
+An error was given because the user code wanted to access a block of memory that was not allowed. Here, by adding the space required to stack (since stack pointer in downward, 0x24 is subtracted form esp), the user code will be allowed to access that block.
 
 ۱۵.
 
@@ -198,6 +205,7 @@ Surely we have problem with the stack. So we have to search for the problem befo
 do-stack-align: exit(12)
 ```
 This line indicates that the return value of the function must be 12. Which means `esp % 16` must be equal to 12.
+
 
 
 
@@ -214,7 +222,7 @@ $1 = 1
 (gdb) print args[1]
 $2 = 162
 ```
-As we can see they are equal with those values which were on top of the stack in previous question.
+As we can see their values are identical to those which were on the top of the stack in the previous question.
 
 ۱۸.
 ```c
