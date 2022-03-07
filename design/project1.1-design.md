@@ -4,13 +4,13 @@
 -----
  > نام و آدرس پست الکترونیکی اعضای گروه را در این قسمت بنویسید.
 
-نام و نام خانوادگی <example@example.com>
+پارسا محمدیان <parsa2820@gmail.com>
 
-نام و نام خانوادگی <example@example.com> 
+آرین یزدان‌پرست <arian.yazdan2001@gmail.com>
 
-نام و نام خانوادگی <example@example.com> 
+سارا آذرنوش <azarnooshsa@gmail.com> 
 
-نام و نام خانوادگی <example@example.com> 
+کسری امانی <kasra138079@gmail.com>
 
 مقدمات
 ----------
@@ -70,7 +70,11 @@
 ===========
 > تستی را که هنگام اجرای فراخوانی سیستمی از یک اشاره‌گر پشته‌ی(esp) نامعتبر استفاده کرده است بیابید. پاسخ شما باید دقیق بوده و نام تست و چگونگی کارکرد آن را شامل شود.
 
+`sc-bad-sp.c` as the name suggests, is the test which uses an invalid value for `esp`. In line 18 in `asm` statement, `esp` is set to `$.-(64*1024*1024)`([program counter](https://stackoverflow.com/questions/43012485/what-does-dot-mean-in-x86-s-assembly-files) minus 2^26) which is an invalid address. Then in same line, `int $0x30` is called. This system call must return error.
+
 > تستی را که هنگام اجرای فراخوانی سیستمی از یک اشاره‌گر پشته‌ی معتبر استفاده کرده ولی اشاره‌گر پشته آنقدر به مرز صفحه نزدیک است که برخی از آرگومان‌های فراخوانی سیستمی در جای نامعتبر مموری قرار گرفته اند مشخص کنید. پاسخ شما باید دقیق بوده و نام تست و چگونگی کارکرد آن را شامل شود.یک قسمت از خواسته‌های تمرین را که توسط مجموعه تست موجود تست نشده‌است، نام ببرید. سپس مشخص کنید تستی که این خواسته را پوشش بدهد چگونه باید باشد.
+
+`sc-bad-arg.c` is the test which uses a valid address for `esp` but because of ajacency of the address to kernel space, the system call will fail. In line 14 in `asm` statement, `esp` is set to `$0xbffffffc`. Considering the `PHYS_BASE` is `0xc0000000`, the address is valid but its difference from the `PHYS_BASE` is only 4. So if system call try to access the address which is 4 bytes away, it will fail.
 
 سوالات نظرخواهی
 ==============
