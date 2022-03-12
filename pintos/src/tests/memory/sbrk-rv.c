@@ -5,20 +5,18 @@
 
 #define LARGE_AMOUNT 10000
 
-void
-test_main (void)
+void test_main(void)
 {
-  unsigned char* heap = sbrk(LARGE_AMOUNT);
-  unsigned char* brk = sbrk(0);
-  ASSERT(LARGE_AMOUNT == (int) (brk - heap));
+  unsigned char *heap = sbrk(LARGE_AMOUNT);
+  unsigned char *brk = sbrk(0);
+  ASSERT(LARGE_AMOUNT == (int)(brk - heap));
 }
 
-int
-main (int argc UNUSED, char *argv[] UNUSED)
+int main(int argc UNUSED, char *argv[] UNUSED)
 {
   test_name = "sbrk-rv";
-  msg ("begin");
+  msg("begin");
   test_main();
-  msg ("end");
+  msg("end");
   return 0;
 }

@@ -6,32 +6,31 @@
 #include "tests/main.h"
 
 static void
-fill(int* buffer, int len)
+fill(int *buffer, int len)
 {
-  for (int i = 0; i != len; i++) {
+  for (int i = 0; i != len; i++)
+  {
     buffer[i] = 0x05158E57;
   }
 }
 
-void
-test_main (void)
+void test_main(void)
 {
-  int* p = realloc(NULL, 8191 * sizeof(int));
+  int *p = realloc(NULL, 8191 * sizeof(int));
   fill(p, 8191);
 
-  int* q = realloc(NULL, 0);
+  int *q = realloc(NULL, 0);
   free(q);
 
-  int* r = realloc(p, 0);
+  int *r = realloc(p, 0);
   free(r);
 }
 
-int
-main (int argc UNUSED, char *argv[] UNUSED)
+int main(int argc UNUSED, char *argv[] UNUSED)
 {
   test_name = "realloc-null";
-  msg ("begin");
+  msg("begin");
   test_main();
-  msg ("end");
+  msg("end");
   return 0;
 }

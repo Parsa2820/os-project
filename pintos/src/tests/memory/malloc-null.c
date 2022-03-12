@@ -5,20 +5,18 @@
 #include "tests/lib.h"
 #include "tests/main.h"
 
-void
-test_main (void)
+void test_main(void)
 {
-  char* p = malloc(0);
+  char *p = malloc(0);
   free(p);
   free(NULL);
 }
 
-int
-main (int argc UNUSED, char *argv[] UNUSED)
+int main(int argc UNUSED, char *argv[] UNUSED)
 {
   test_name = "malloc-null";
-  msg ("begin");
+  msg("begin");
   test_main();
-  msg ("end");
+  msg("end");
   return 0;
 }
