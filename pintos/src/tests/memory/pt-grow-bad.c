@@ -7,18 +7,16 @@
 #include "tests/lib.h"
 #include "tests/main.h"
 
-void
-test_main (void)
+void test_main(void)
 {
-  asm volatile ("movl -4096(%esp), %eax");
+  asm volatile("movl -4096(%esp), %eax");
 }
 
-int
-main (int argc UNUSED, char *argv[] UNUSED)
+int main(int argc UNUSED, char *argv[] UNUSED)
 {
   test_name = "pt-grow-bad";
-  msg ("begin");
+  msg("begin");
   test_main();
-  msg ("end");
+  msg("end");
   return 0;
 }

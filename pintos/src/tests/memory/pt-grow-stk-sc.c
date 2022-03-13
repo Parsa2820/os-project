@@ -10,27 +10,25 @@
 #include "tests/lib.h"
 #include "tests/main.h"
 
-void
-test_main (void)
+void test_main(void)
 {
   int handle;
-  int slen = strlen (sample);
+  int slen = strlen(sample);
   char buf2[65536];
 
   /* Read back via read(). */
-  CHECK ((handle = open ("sample.txt")) > 1, "open \"sample.txt\"");
-  CHECK (read (handle, buf2 + 32768, slen) == slen, "read \"sample.txt\"");
+  CHECK((handle = open("sample.txt")) > 1, "open \"sample.txt\"");
+  CHECK(read(handle, buf2 + 32768, slen) == slen, "read \"sample.txt\"");
 
-  CHECK (!memcmp (sample, buf2 + 32768, slen), "compare read data against reference");
-  close (handle);
+  CHECK(!memcmp(sample, buf2 + 32768, slen), "compare read data against reference");
+  close(handle);
 }
 
-int
-main (int argc UNUSED, char *argv[] UNUSED)
+int main(int argc UNUSED, char *argv[] UNUSED)
 {
   test_name = "pt-grow-stk-sc";
-  msg ("begin");
+  msg("begin");
   test_main();
-  msg ("end");
+  msg("end");
   return 0;
 }

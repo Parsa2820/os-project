@@ -52,11 +52,17 @@ tid_t process_execute(const char *file_name)
   return tid;
 }
 
-
-static void 
-push_to_stack(){
-  
+static void
+push_to_stack()
+{
 }
+
+struct process_param
+{
+  int argc;
+  char **argv;
+};
+
 /* A thread function that loads a user process and starts it
    running. */
 static void
@@ -65,16 +71,18 @@ start_process(void *file_name_)
   char *command = file_name_;
   struct intr_frame if_;
   bool success;
+
   struct process_param *pp = malloc(sizeof(struct process_param));
   pp->argc = 0;
   char *token;
-  while ((token = strtok_r(command, " ", &command)))
+  while ((token = strtok_r(file_name, " ", &file_name)))
   {
     pp->argv[0] = malloc(sizeof(token));
-    strcpy(pp->argv, token);
+    strlcpy(pp->argv, token, PGSIZE);
     pp->argc++;
   }
   push_to_stack();
+
   /* Initialize interrupt frame and load executable. */
   memset(&if_, 0, sizeof if_);
   if_.gs = if_.fs = if_.es = if_.ds = if_.ss = SEL_UDSEG;

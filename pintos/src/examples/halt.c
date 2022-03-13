@@ -6,9 +6,8 @@
 
 #include <syscall.h>
 
-int
-main (void)
+int main(void)
 {
-  halt ();
+  halt();
   /* not reached */
 }

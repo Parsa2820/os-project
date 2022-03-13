@@ -14,51 +14,54 @@
 #define S_CONST 0xba5eba11
 
 static void
-check_zero(int* buffer, int len)
+check_zero(int *buffer, int len)
 {
-  for (int i = 0; i != len; i++) {
+  for (int i = 0; i != len; i++)
+  {
     ASSERT(buffer[i] == 0);
   }
 }
 
 static void
-fill(int* buffer, int len, int with)
+fill(int *buffer, int len, int with)
 {
-  for (int i = 0; i != len; i++) {
+  for (int i = 0; i != len; i++)
+  {
     buffer[i] = with;
   }
 }
 
 static void
-check_filled(int* buffer, int len, int with) {
-  for (int i = 0; i != len; i++) {
+check_filled(int *buffer, int len, int with)
+{
+  for (int i = 0; i != len; i++)
+  {
     ASSERT(buffer[i] == with);
   }
 }
 
-static void*
+static void *
 test_alloc(int num_ints, int with)
 {
-  int* ptr = calloc(num_ints, sizeof(int));
+  int *ptr = calloc(num_ints, sizeof(int));
   check_zero(ptr, num_ints);
   fill(ptr, num_ints, with);
   return ptr;
 }
 
-void
-test_main (void)
+void test_main(void)
 {
-  int* p = test_alloc(2 * NUM_INTS, P_CONST);
-  int* q = test_alloc(2 * NUM_INTS, Q_CONST);
-  int* r = realloc(p, 4 * NUM_INTS * sizeof(int));
+  int *p = test_alloc(2 * NUM_INTS, P_CONST);
+  int *q = test_alloc(2 * NUM_INTS, Q_CONST);
+  int *r = realloc(p, 4 * NUM_INTS * sizeof(int));
   check_filled(r, 2 * NUM_INTS, P_CONST);
   fill(r + 2 * NUM_INTS, 2 * NUM_INTS, R_CONST);
   ASSERT(r != p);
 
-  int* s = test_alloc(2 * NUM_INTS, S_CONST);
+  int *s = test_alloc(2 * NUM_INTS, S_CONST);
   ASSERT(s == p);
 
-  int* t = realloc(r, GIBI);
+  int *t = realloc(r, GIBI);
   ASSERT(t == NULL);
 
   check_filled(r, 2 * NUM_INTS, P_CONST);
@@ -71,12 +74,11 @@ test_main (void)
   free(s);
 }
 
-int
-main (int argc UNUSED, char *argv[] UNUSED)
+int main(int argc UNUSED, char *argv[] UNUSED)
 {
   test_name = "realloc-2";
-  msg ("begin");
+  msg("begin");
   test_main();
-  msg ("end");
+  msg("end");
   return 0;
 }

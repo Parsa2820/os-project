@@ -4,18 +4,16 @@
 #include "tests/lib.h"
 #include "tests/main.h"
 
-void
-test_main (void)
+void test_main(void)
 {
-  fail ("bad addr read as %d", *(int *) 0x04000000);
+  fail("bad addr read as %d", *(int *)0x04000000);
 }
 
-int
-main (int argc UNUSED, char *argv[] UNUSED)
+int main(int argc UNUSED, char *argv[] UNUSED)
 {
   test_name = "pt-bad-addr";
-  msg ("begin");
+  msg("begin");
   test_main();
-  msg ("end");
+  msg("end");
   return 0;
 }

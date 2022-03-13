@@ -1,12 +1,11 @@
 #include "tests/lib.h"
 #include "sbrk-simple.h"
 
-int
-main (int argc UNUSED, char *argv[] UNUSED)
+int main(int argc UNUSED, char *argv[] UNUSED)
 {
   test_name = "sbrk-multi";
-  msg ("begin");
+  msg("begin");
   test_sbrk(10000);
-  msg ("end");
+  msg("end");
   return 0;
 }
