@@ -28,6 +28,9 @@ struct process_param
   int argc;
   char **argv;
 };
+
+typedef struct process_param process_param_t;
+
 /* Starts a new thread running a user program loaded from
    FILENAME.  The new thread may be scheduled (and may even exit)
    before process_execute() returns.  Returns the new process's
@@ -53,15 +56,28 @@ tid_t process_execute(const char *file_name)
 }
 
 static void
-push_to_stack()
+push_to_stack(void **esp, process_param_t *pp)
 {
-}
+  int addresses[pp->argc];
+  int address_argv;
+  for (int i = 0; i < pp->argc; i++)
+  {
+    *esp -= strlen(pp->argv[i]) + 1;
+    memcpy(*esp, pp->argv[i], strlen(pp->argv[i]) + 1);
+    addresses[i] = *esp;
+  }
+  for (int i = 0; i < pp->argc; i++)
+  {
+    *esp -= sizeof(addresses[i]);
+    memcpy(*esp, addresses[i], sizeof(addresses[i]));
+  }
 
-struct process_param
-{
-  int argc;
-  char **argv;
-};
+  *esp -= sizeof(pp->argv);
+  memset(*esp, *esp + sizeof(pp->argv), sizeof(pp->argv));
+  *esp -= sizeof(pp->argc);
+  memset(*esp, pp->argc, sizeof(pp->argc));
+  *esp -= (* (unsigned int *) esp + 4) % 16;
+}
 
 /* A thread function that loads a user process and starts it
    running. */
@@ -75,23 +91,23 @@ start_process(void *file_name_)
   struct process_param *pp = malloc(sizeof(struct process_param));
   pp->argc = 0;
   char *token;
-  while ((token = strtok_r(file_name, " ", &file_name)))
+  while ((token = strtok_r(command, " ", &command)))
   {
-    pp->argv[0] = malloc(sizeof(token));
-    strlcpy(pp->argv, token, PGSIZE);
+    pp->argv[pp->argc] = malloc(strlen(token) + 1);
+    strlcpy(pp->argv[pp->argc], token, PGSIZE);
     pp->argc++;
   }
-  push_to_stack();
+  push_to_stack(&if_.esp, pp);
 
   /* Initialize interrupt frame and load executable. */
   memset(&if_, 0, sizeof if_);
   if_.gs = if_.fs = if_.es = if_.ds = if_.ss = SEL_UDSEG;
   if_.cs = SEL_UCSEG;
   if_.eflags = FLAG_IF | FLAG_MBS;
-  success = load(file_name, &if_.eip, &if_.esp);
+  success = load(pp->argv[0], &if_.eip, &if_.esp);
 
   /* If load failed, quit. */
-  palloc_free_page(file_name);
+  palloc_free_page(pp->argv[0]);
   if (!success)
     thread_exit();
 
