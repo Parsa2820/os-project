@@ -73,7 +73,7 @@ start_process(void *file_name_)
   while ((token = strtok_r(file_name, " ", &file_name)))
   {
     pp->argv[0] = malloc(sizeof(token));
-    strcpy(pp->argv, token);
+    strlcpy(pp->argv, token, PGSIZE);
     pp->argc++;
   }
   push_to_stack();
