@@ -26,6 +26,17 @@ typedef int tid_t;
 #define PRI_DEFAULT 31 /* Default priority. */
 #define PRI_MAX 63     /* Highest priority. */
 
+/* File descriptor for thread open files */
+typedef struct file_descriptor
+{
+  /* low level file struct */
+  struct file *file; 
+  /* file descriptor number */
+  int fileno;
+  /* list node */
+  struct list_elem elem;
+} file_descriptor_t;
+
 /* A kernel thread or user process.
 
    Each thread structure is stored in its own 4 kB page.  The
@@ -98,6 +109,8 @@ struct thread
 #ifdef USERPROG
    /* Owned by userprog/process.c. */
    uint32_t *pagedir; /* Page directory. */
+   /* file descriptor of the current thread stored as a doubly linked list */
+   struct list file_descriptors;
 #endif
 
    /* Owned by thread.c. */
