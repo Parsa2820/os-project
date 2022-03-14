@@ -60,23 +60,45 @@ push_to_stack(void **esp, process_param_t *pp)
 {
   int addresses[pp->argc];
   int address_argv;
+
   for (int i = 0; i < pp->argc; i++)
   {
     *esp -= strlen(pp->argv[i]) + 1;
-    memcpy(*esp, pp->argv[i], strlen(pp->argv[i]) + 1);
+    memcpy((void *)*((int *)*esp), pp->argv[i], strlen(pp->argv[i]) + 1);
     addresses[i] = *esp;
   }
+
+  *esp -= sizeof(addresses[0]);
+  memset((void *)*((int *)*esp), 0, sizeof(addresses[0]));
+
   for (int i = 0; i < pp->argc; i++)
   {
     *esp -= sizeof(addresses[i]);
-    memcpy(*esp, addresses[i], sizeof(addresses[i]));
+    memcpy((void *)*((int *)*esp), addresses[i], sizeof(addresses[i]));
   }
 
   *esp -= sizeof(pp->argv);
-  memset(*esp, *esp + sizeof(pp->argv), sizeof(pp->argv));
+  memset((void *)*((int *)*esp), *esp + sizeof(pp->argv), sizeof(pp->argv));
   *esp -= sizeof(pp->argc);
-  memset(*esp, pp->argc, sizeof(pp->argc));
-  *esp -= (* (unsigned int *) esp + 4) % 16;
+  memset((void *)*((int *)*esp), pp->argc, sizeof(pp->argc));
+  *esp -= (*(unsigned int *)esp + 4) % 16;
+}
+
+process_param_t *parse_process_param(char* command_)
+{
+  char *command = malloc(strlen(command_) + 1);
+  strlcpy(command, command_, strlen(command_) + 1);
+  process_param_t *pp = malloc(sizeof(process_param_t));
+  pp->argc = 0;
+  char *token;
+  
+  while ((token = strtok_r(command, " ", &command)))
+  {
+    pp->argv[pp->argc] = token;
+    pp->argc++;
+  }
+
+  return pp;
 }
 
 /* A thread function that loads a user process and starts it
@@ -84,32 +106,25 @@ push_to_stack(void **esp, process_param_t *pp)
 static void
 start_process(void *file_name_)
 {
-  char *command = file_name_;
+  char *file_name = file_name_;
   struct intr_frame if_;
   bool success;
 
-  struct process_param *pp = malloc(sizeof(struct process_param));
-  pp->argc = 0;
-  char *token;
-  while ((token = strtok_r(command, " ", &command)))
-  {
-    pp->argv[pp->argc] = malloc(strlen(token) + 1);
-    strlcpy(pp->argv[pp->argc], token, PGSIZE);
-    pp->argc++;
-  }
-  push_to_stack(&if_.esp, pp);
+  // process_param_t *pp = parse_process_param(file_name);
 
   /* Initialize interrupt frame and load executable. */
   memset(&if_, 0, sizeof if_);
   if_.gs = if_.fs = if_.es = if_.ds = if_.ss = SEL_UDSEG;
   if_.cs = SEL_UCSEG;
   if_.eflags = FLAG_IF | FLAG_MBS;
-  success = load(pp->argv[0], &if_.eip, &if_.esp);
+  success = load(file_name, &if_.eip, &if_.esp);
 
   /* If load failed, quit. */
-  palloc_free_page(pp->argv[0]);
+  palloc_free_page(file_name);
   if (!success)
     thread_exit();
+  
+  // push_to_stack(&if_.esp, pp);
 
   /* Start the user process by simulating a return from an
      interrupt, implemented by intr_exit (in
