@@ -18,6 +18,6 @@ pintos --gdb --filesys-size=2 -p ./build/tests/userprog/do-nothing -a do-nothing
 ```
 cd pintos/src/userprog/build
 pintos-gdb ./kernel.o
-debugpintos
+debugpintos or deb or target remote localhost:1234
 ```
 
