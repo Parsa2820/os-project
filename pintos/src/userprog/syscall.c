@@ -1,13 +1,34 @@
 #include "userprog/syscall.h"
 #include <stdio.h>
 #include <syscall-nr.h>
+#include <string.h>
 #include "threads/interrupt.h"
 #include "threads/thread.h"
 #include "filesys/file.h"
 #include "lib/kernel/list.h"
 #include "filesys/filesys.h"
+#include "threads/synch.h"
+#include "threads/malloc.h"
+#include "devices/input.h"
+#include "devices/shutdown.h"
 
 static void syscall_handler(struct intr_frame *);
+static void syscall_exit(struct intr_frame *, uint32_t *);
+static void syscall_practice(struct intr_frame *, uint32_t *);
+#ifdef USERPROG
+static void syscall_write(struct intr_frame *, uint32_t *);
+static void syscall_create(struct intr_frame *, uint32_t *);
+static void syscall_remove(struct intr_frame *, uint32_t *);
+static void syscall_open(struct intr_frame *, uint32_t *);
+static void syscall_filesize(struct intr_frame *, uint32_t *);
+static void syscall_read(struct intr_frame *, uint32_t *);
+static void syscall_seek(struct intr_frame *, uint32_t *);
+static void syscall_tell(struct intr_frame *, uint32_t *);
+static void syscall_close(struct intr_frame *, uint32_t *);
+#endif
+static void syscall_halt(struct intr_frame *, uint32_t *);
+static void syscall_wait(struct intr_frame *, uint32_t *);
+static void syscall_exec(struct intr_frame *, uint32_t *);
 
 void syscall_init(void)
 {
@@ -17,8 +38,10 @@ void syscall_init(void)
 static bool
 is_valid_ptr(const void *ptr)
 {
-  return ptr != NULL && is_user_vaddr(ptr);
+  return ptr != NULL; // && is_user_vaddr(ptr);
 }
+
+#ifdef USERPROG
 
 static file_descriptor_t *
 find_file_descriptor(int fd)
@@ -31,7 +54,7 @@ find_file_descriptor(int fd)
   }
 
   struct list_elem *current_element;
-  struct file_descriptor *current_fd;
+  file_descriptor_t *current_fd;
 
   for (current_element = list_begin(file_descriptors);
        current_element != list_end(file_descriptors);
@@ -48,24 +71,7 @@ find_file_descriptor(int fd)
   return NULL;
 }
 
-static void
-syscall_exit(struct intr_frame *f, uint32_t *args)
-{
-  int status = args[1];
-  f->eax = status;
-  printf("%s: exit(%d)\n", &thread_current()->name, status);
-  thread_exit();
-}
-
-static void
-syscall_practice(struct intr_frame *f, uint32_t *args)
-{
-  int i = args[1];
-  f->eax = i + 1;
-}
-
-static void
-syscall_write(struct intr_frame *f, uint32_t *args)
+static void syscall_write(struct intr_frame *f, uint32_t *args)
 {
   int fd = args[1];
   void *buffer = (void *)args[2];
@@ -95,8 +101,7 @@ syscall_write(struct intr_frame *f, uint32_t *args)
   f->eax = file_write(file_descriptor->file, buffer, size);
 }
 
-static void
-syscall_create(struct intr_frame *f, uint32_t *args)
+static void syscall_create(struct intr_frame *f, uint32_t *args)
 {
   const char *file = (const char *)args[1];
   unsigned initial_size = args[2];
@@ -111,8 +116,7 @@ syscall_create(struct intr_frame *f, uint32_t *args)
   f->eax = filesys_create(file, initial_size);
 }
 
-static void
-syscall_remove(struct intr_frame *f, uint32_t *args)
+static void syscall_remove(struct intr_frame *f, uint32_t *args)
 {
   const char *file = (const char *)args[1];
 
@@ -126,8 +130,7 @@ syscall_remove(struct intr_frame *f, uint32_t *args)
   f->eax = filesys_remove(file);
 }
 
-static void
-syscall_open(struct intr_frame *f, uint32_t *args)
+static void syscall_open(struct intr_frame *f, uint32_t *args)
 {
   const char *file = (const char *)args[1];
 
@@ -148,15 +151,14 @@ syscall_open(struct intr_frame *f, uint32_t *args)
 
   struct thread *current_thread = thread_current();
   int fileno = current_thread->last_fileno++;
-  struct file_descriptor *file_descriptor = malloc(sizeof(struct file_descriptor));
+  file_descriptor_t *file_descriptor = malloc(sizeof(file_descriptor_t));
   file_descriptor->file = opened_file;
   file_descriptor->fileno = fileno;
   list_push_back(&current_thread->file_descriptors, &file_descriptor->elem);
   f->eax = fileno;
 }
 
-static void
-syscall_filesize(struct intr_frame *f, uint32_t *args)
+static void syscall_filesize(struct intr_frame *f, uint32_t *args)
 {
   int fd = args[1];
 
@@ -166,7 +168,7 @@ syscall_filesize(struct intr_frame *f, uint32_t *args)
     return;
   }
 
-  file_descriptor_t *file_descriptor = get_file_descriptor(fd);
+  file_descriptor_t *file_descriptor = find_file_descriptor(fd);
 
   if (file_descriptor == NULL)
   {
@@ -177,8 +179,7 @@ syscall_filesize(struct intr_frame *f, uint32_t *args)
   f->eax = file_length(file_descriptor->file);
 }
 
-static void
-syscall_read(struct intr_frame *f, uint32_t *args)
+static void syscall_read(struct intr_frame *f, uint32_t *args)
 {
   int fd = args[1];
   void *buffer = (void *)args[2];
@@ -213,22 +214,20 @@ syscall_read(struct intr_frame *f, uint32_t *args)
   f->eax = file_read(file_descriptor->file, buffer, size);
 }
 
-static void
-syscall_seek(struct intr_frame *f, uint32_t *args)
+static void syscall_seek(struct intr_frame *f, uint32_t *args)
 {
   int fd = args[1];
   unsigned position = args[2];
-  file_descriptor_t *file_descriptor = get_file_descriptor(fd);
-  file_seek(file_descriptor->file, args[2]);
+  file_descriptor_t *file_descriptor = find_file_descriptor(fd);
+  file_seek(file_descriptor->file, position);
   f->eax = 0;
 }
 
-static void
-syscall_tell(struct intr_frame *f, uint32_t *args)
+static void syscall_tell(struct intr_frame *f, uint32_t *args)
 {
   int fd = args[1];
 
-  file_descriptor_t *file_descriptor = get_file_descriptor(fd);
+  file_descriptor_t *file_descriptor = find_file_descriptor(fd);
 
   if (file_descriptor == NULL)
   {
@@ -239,12 +238,11 @@ syscall_tell(struct intr_frame *f, uint32_t *args)
   f->eax = file_tell(file_descriptor->file);
 }
 
-static void
-syscall_close(struct intr_frame *f, uint32_t *args)
+static void syscall_close(struct intr_frame *f, uint32_t *args)
 {
   int fd = args[1];
 
-  file_descriptor_t *file_descriptor = get_file_descriptor(fd);
+  file_descriptor_t *file_descriptor = find_file_descriptor(fd);
 
   if (file_descriptor == NULL)
   {
@@ -258,39 +256,54 @@ syscall_close(struct intr_frame *f, uint32_t *args)
   f->eax = 0;
 }
 
-static void
-syscall_halt(struct intr_frame *f, uint32_t *args)
+#endif
+
+static void syscall_exit(struct intr_frame *f, uint32_t *args)
+{
+  int status = args[1];
+  f->eax = status;
+  printf("%s: exit(%d)\n", (char *)&thread_current()->name, status);
+  thread_exit();
+}
+
+static void syscall_practice(struct intr_frame *f, uint32_t *args)
+{
+  int i = args[1];
+  f->eax = i + 1;
+}
+
+static void syscall_halt(struct intr_frame *f, uint32_t *args)
 {
   shutdown_power_off();
 }
 
-static void
-syscall_wait(struct intr_frame *f, uint32_t *args)
+static void syscall_wait(struct intr_frame *f, uint32_t *args)
 {
-  f->eax = process_wait(args[1]);
+  // f->eax = process_wait(args[1]);
 }
 
-static void
-syscall_exec(struct intr_frame *f, uint32_t *args)
+static void syscall_exec(struct intr_frame *f, uint32_t *args)
 {
-  f->eax = process_execute((char *)args[1]);
+  // f->eax = process_execute((char *)args[1]);
 }
 
 syscall_descriptor_t syscall_table[] = {
-    {SYS_EXIT, &syscall_exit},
-    {SYS_PRACTICE, &syscall_practice},
-    {SYS_WRITE, &syscall_write},
-    {SYS_CREATE, &syscall_create},
-    {SYS_REMOVE, &syscall_remove},
-    {SYS_OPEN, &syscall_open},
-    {SYS_FILESIZE, &syscall_filesize},
-    {SYS_READ, &syscall_read},
-    {SYS_SEEK, &syscall_seek},
-    {SYS_TELL, &syscall_tell},
-    {SYS_CLOSE, &syscall_close},
-    {SYS_HALT, &syscall_halt},
-    {SYS_WAIT, &syscall_wait},
-    {SYS_EXEC, &syscall_exec},
+#ifdef USERPROG
+    {SYS_WRITE, &syscall_write, 1},
+    {SYS_CREATE, &syscall_create, 1},
+    {SYS_REMOVE, &syscall_remove, 1},
+    {SYS_OPEN, &syscall_open, 1},
+    {SYS_FILESIZE, &syscall_filesize, 1},
+    {SYS_READ, &syscall_read, 1},
+    {SYS_SEEK, &syscall_seek, 1},
+    {SYS_TELL, &syscall_tell, 1},
+    {SYS_CLOSE, &syscall_close, 1},
+#endif
+    {SYS_EXIT, &syscall_exit, 0},
+    {SYS_PRACTICE, &syscall_practice, 0},
+    {SYS_HALT, &syscall_halt, 0},
+    {SYS_WAIT, &syscall_wait, 0},
+    {SYS_EXEC, &syscall_exec, 0},
 };
 
 static void
@@ -309,11 +322,19 @@ syscall_handler(struct intr_frame *f UNUSED)
 
   int syscall_number = args[0];
 
-  for (int i = 0; i < (sizeof(syscall_table) / sizeof(syscall_descriptor_t)); i++)
+  for (unsigned i = 0; i < (sizeof(syscall_table) / sizeof(syscall_descriptor_t)); i++)
   {
     if (syscall_number == syscall_table[i].number)
     {
-      syscall_table[i].func(f, args);
+      syscall_descriptor_t syscall = syscall_table[i];
+
+      if (syscall.is_file_op)
+        lock_acquire(&filesys_lock);
+
+      // syscall.syscall_func(f, args);
+
+      if (syscall.is_file_op)
+        lock_release(&filesys_lock);
     }
   }
 

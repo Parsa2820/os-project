@@ -109,7 +109,9 @@ struct thread
 #ifdef USERPROG
    /* Owned by userprog/process.c. */
    uint32_t *pagedir; /* Page directory. */
-   /* file descriptor of the current thread stored as a doubly linked list */
+   /* Last used fileno */
+   int last_fileno;
+   /* File descriptor of the current thread stored as a doubly linked list */
    struct list file_descriptors;
 #endif
 
