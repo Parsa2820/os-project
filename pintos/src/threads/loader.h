@@ -14,7 +14,7 @@
 
 /* Initial stack size for loading a user program.
    4 bytes for argc, 4 bytes for argv, 26 byte idk. */
-#define INIT_STACK_SIZE 0x24
+#define INIT_STACK_SIZE 0x0
 
 /* Important loader physical addresses. */
 #define LOADER_SIG (LOADER_END - LOADER_SIG_LEN)          /* 0xaa55 BIOS signature. */

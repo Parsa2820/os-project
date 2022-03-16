@@ -18,6 +18,7 @@
 #include "threads/synch.h"
 #include "threads/thread.h"
 #include "threads/vaddr.h"
+// #include "threads/malloc.h"
 
 static struct semaphore temporary;
 static thread_func start_process NO_RETURN;
@@ -58,47 +59,82 @@ tid_t process_execute(const char *file_name)
 static void
 push_to_stack(void **esp, process_param_t *pp)
 {
-  int addresses[pp->argc];
+  unsigned int addresses[pp->argc];
   int address_argv;
 
   for (int i = 0; i < pp->argc; i++)
   {
     *esp -= strlen(pp->argv[i]) + 1;
-    memcpy((void *)*((int *)*esp), pp->argv[i], strlen(pp->argv[i]) + 1);
+    memcpy(*esp, pp->argv[i], strlen(pp->argv[i]) + 1);
     addresses[i] = *esp;
   }
-
+  *esp -= (*(unsigned int *)esp + 4) % 16;
   *esp -= sizeof(addresses[0]);
-  memset((void *)*((int *)*esp), 0, sizeof(addresses[0]));
+  memset(*esp, 0, sizeof(addresses[0]));
 
   for (int i = 0; i < pp->argc; i++)
   {
     *esp -= sizeof(addresses[i]);
-    memcpy((void *)*((int *)*esp), addresses[i], sizeof(addresses[i]));
+    **((unsigned int **)esp) = addresses[0];
   }
 
+  unsigned int argv_address = (unsigned int)*esp;
+  *esp = (unsigned int)*esp - ((int)((unsigned int)*esp % 16));
   *esp -= sizeof(pp->argv);
-  memset((void *)*((int *)*esp), *esp + sizeof(pp->argv), sizeof(pp->argv));
+  *((unsigned int *)*esp) = argv_address;
   *esp -= sizeof(pp->argc);
-  memset((void *)*((int *)*esp), pp->argc, sizeof(pp->argc));
-  *esp -= (*(unsigned int *)esp + 4) % 16;
+  *((unsigned int *)*esp) = pp->argc;
+  *esp -= 8; // TODO: to be decided 
 }
 
-process_param_t *parse_process_param(char* command_)
+int get_argc(const char *command_)
 {
   char *command = malloc(strlen(command_) + 1);
   strlcpy(command, command_, strlen(command_) + 1);
-  process_param_t *pp = malloc(sizeof(process_param_t));
-  pp->argc = 0;
+  int argc = 0;
+
   char *token;
-  
-  while ((token = strtok_r(command, " ", &command)))
+  char *saveptr;
+  token = strtok_r(command, " ", &saveptr);
+  argc++;
+
+  while ((token = strtok_r(NULL, " ", &saveptr)) != NULL)
   {
-    pp->argv[pp->argc] = token;
-    pp->argc++;
+    argc++;
+  }
+
+  free(command);
+  return argc;
+}
+
+process_param_t *parse_process_param(char *command)
+{
+  process_param_t *pp = malloc(sizeof(process_param_t));
+  pp->argc = get_argc(command);
+  pp->argv = malloc(sizeof(char *) * pp->argc);
+  char *token;
+  char *saveptr;
+  token = strtok_r(command, " ", &saveptr);
+  pp->argv[pp->argc] = malloc(strlen(token) + 1);
+  strlcpy(pp->argv[pp->argc], token, strlen(token) + 1);
+
+  while ((token = strtok_r(NULL, " ", &saveptr)) != NULL)
+  {
+    pp->argv[pp->argc] = malloc(strlen(token) + 1);
+    strlcpy(pp->argv[pp->argc], token, strlen(token) + 1);
   }
 
   return pp;
+}
+
+void free_process_param(process_param_t *pp)
+{
+  for (int i = 0; i < pp->argc; i++)
+  {
+    free(pp->argv[i]);
+  }
+
+  free(pp);
 }
 
 /* A thread function that loads a user process and starts it
@@ -110,21 +146,20 @@ start_process(void *file_name_)
   struct intr_frame if_;
   bool success;
 
-  // process_param_t *pp = parse_process_param(file_name);
-
   /* Initialize interrupt frame and load executable. */
   memset(&if_, 0, sizeof if_);
   if_.gs = if_.fs = if_.es = if_.ds = if_.ss = SEL_UDSEG;
   if_.cs = SEL_UCSEG;
   if_.eflags = FLAG_IF | FLAG_MBS;
+  process_param_t *pp = parse_process_param(file_name);
   success = load(file_name, &if_.eip, &if_.esp);
 
   /* If load failed, quit. */
   palloc_free_page(file_name);
   if (!success)
     thread_exit();
-  
-  // push_to_stack(&if_.esp, pp);
+  push_to_stack(&if_.esp, pp);
+  // free_process_param(pp);
 
   /* Start the user process by simulating a return from an
      interrupt, implemented by intr_exit (in
