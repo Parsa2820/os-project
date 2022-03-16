@@ -331,7 +331,7 @@ syscall_handler(struct intr_frame *f UNUSED)
       if (syscall.is_file_op)
         lock_acquire(&filesys_lock);
 
-      // syscall.syscall_func(f, args);
+      syscall.syscall_func(f, args);
 
       if (syscall.is_file_op)
         lock_release(&filesys_lock);
