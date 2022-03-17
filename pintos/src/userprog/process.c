@@ -32,6 +32,22 @@ struct process_param
 
 typedef struct process_param process_param_t;
 
+static char *
+get_file_name(char *command_)
+{
+  for (int i = 0; i < strlen(command_) + 1; i++)
+  {
+    if (command_[i] == ' ')
+    {
+      char *file_name = malloc(i + 2);
+      strlcpy(file_name, command_, i+1);
+      file_name[i + 2] = 0;
+      return file_name;
+    }
+  }
+  return command_;
+  
+}
 /* Starts a new thread running a user program loaded from
    FILENAME.  The new thread may be scheduled (and may even exit)
    before process_execute() returns.  Returns the new process's
@@ -40,7 +56,7 @@ tid_t process_execute(const char *file_name)
 {
   char *fn_copy;
   tid_t tid;
-
+  char *file_name_only = get_file_name(file_name);
   sema_init(&temporary, 0);
   /* Make a copy of FILE_NAME.
      Otherwise there's a race between the caller and load(). */
@@ -50,7 +66,7 @@ tid_t process_execute(const char *file_name)
   strlcpy(fn_copy, file_name, PGSIZE);
 
   /* Create a new thread to execute FILE_NAME. */
-  tid = thread_create(file_name, PRI_DEFAULT, start_process, fn_copy);
+  tid = thread_create(file_name_only, PRI_DEFAULT, start_process, fn_copy);
   if (tid == TID_ERROR)
     palloc_free_page(fn_copy);
   return tid;
@@ -61,7 +77,7 @@ push_to_stack(void **esp, process_param_t *pp)
 {
   char *addresses[pp->argc];
 
-  for (int i = pp->argc-1; i >=0 ; i--)
+  for (int i = pp->argc - 1; i >= 0; i--)
   {
     *esp -= strlen(pp->argv[i]) + 1;
     memcpy(*esp, pp->argv[i], strlen(pp->argv[i]) + 1);
@@ -71,14 +87,14 @@ push_to_stack(void **esp, process_param_t *pp)
   *esp -= sizeof(addresses[0]);
   memset(*esp, 0, sizeof(addresses[0]));
 
-  for (int i = pp->argc-1; i >= 0; i--)
+  for (int i = pp->argc - 1; i >= 0; i--)
   {
     *esp -= sizeof(addresses[i]);
     **((char ***)esp) = addresses[i];
   }
 
   char **argv_address = *esp; // 0xc0000000
-  *esp = (unsigned int)*esp - ((int)((unsigned int)*esp % 16)+8);
+  *esp = (unsigned int)*esp - ((int)((unsigned int)*esp % 16) + 8);
   *esp -= sizeof(pp->argv);
   *((char **)*esp) = argv_address;
   *esp -= sizeof(pp->argc);
