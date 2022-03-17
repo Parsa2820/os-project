@@ -11,6 +11,7 @@
 #include "threads/malloc.h"
 #include "devices/input.h"
 #include "devices/shutdown.h"
+#include "userprog/process.h"
 
 static void syscall_handler(struct intr_frame *);
 static void syscall_exit(struct intr_frame *, uint32_t *);
@@ -281,12 +282,22 @@ static void syscall_halt(struct intr_frame *f, uint32_t *args)
 
 static void syscall_wait(struct intr_frame *f, uint32_t *args)
 {
-  // f->eax = process_wait(args[1]);
+  pid_t pid = args[1];
+  f->eax = process_wait(pid);
 }
 
 static void syscall_exec(struct intr_frame *f, uint32_t *args)
 {
-  // f->eax = process_execute((char *)args[1]);
+  const char *file = (const char *)args[1];
+
+  if (!is_valid_ptr(file) ||
+      !is_valid_ptr(file + strlen(file) - 1))
+  {
+    f->eax = -1;
+    return;
+  }
+
+  f->eax = process_execute(file);
 }
 
 syscall_descriptor_t syscall_table[] = {
