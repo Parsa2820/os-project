@@ -114,14 +114,16 @@ process_param_t *parse_process_param(char *command)
   pp->argv = malloc(sizeof(char *) * pp->argc);
   char *token;
   char *saveptr;
+  int idx = 0;
   token = strtok_r(command, " ", &saveptr);
-  pp->argv[pp->argc] = malloc(strlen(token) + 1);
-  strlcpy(pp->argv[pp->argc], token, strlen(token) + 1);
+  pp->argv[idx] = malloc(strlen(token) + 1);
+  strlcpy(pp->argv[idx], token, strlen(token) + 1);
 
   while ((token = strtok_r(NULL, " ", &saveptr)) != NULL)
   {
-    pp->argv[pp->argc] = malloc(strlen(token) + 1);
-    strlcpy(pp->argv[pp->argc], token, strlen(token) + 1);
+    idx++;
+    pp->argv[idx] = malloc(strlen(token) + 1);
+    strlcpy(pp->argv[idx], token, strlen(token) + 1);
   }
 
   return pp;
@@ -159,7 +161,7 @@ start_process(void *file_name_)
   if (!success)
     thread_exit();
   push_to_stack(&if_.esp, pp);
-  // free_process_param(pp);
+  free_process_param(pp);
 
   /* Start the user process by simulating a return from an
      interrupt, implemented by intr_exit (in

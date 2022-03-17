@@ -88,6 +88,8 @@ static void syscall_write(struct intr_frame *f, uint32_t *args)
   if (fd == 1 /* stdout */)
   {
     putbuf(buffer, size);
+    f->eax = size;
+    return;
   }
 
   file_descriptor_t *file_descriptor = find_file_descriptor(fd);
@@ -326,15 +328,15 @@ syscall_handler(struct intr_frame *f UNUSED)
   {
     if (syscall_number == syscall_table[i].number)
     {
-      syscall_descriptor_t syscall = syscall_table[i];
-
-      if (syscall.is_file_op)
+      if (syscall_table[i].is_file_op)
         lock_acquire(&filesys_lock);
 
-      syscall.syscall_func(f, args);
+      syscall_table[i].syscall_func(f, args);
 
-      if (syscall.is_file_op)
+      if (syscall_table[i].is_file_op)
         lock_release(&filesys_lock);
+
+      return;
     }
   }
 
