@@ -59,8 +59,7 @@ tid_t process_execute(const char *file_name)
 static void
 push_to_stack(void **esp, process_param_t *pp)
 {
-  unsigned int addresses[pp->argc];
-  int address_argv;
+  char *addresses[pp->argc];
 
   for (int i = 0; i < pp->argc; i++)
   {
@@ -75,16 +74,16 @@ push_to_stack(void **esp, process_param_t *pp)
   for (int i = 0; i < pp->argc; i++)
   {
     *esp -= sizeof(addresses[i]);
-    **((unsigned int **)esp) = addresses[0];
+    **((char ***)esp) = addresses[0];
   }
 
-  unsigned int argv_address = (unsigned int)*esp;
+  char **argv_address = *esp; // 0xc0000000
   *esp = (unsigned int)*esp - ((int)((unsigned int)*esp % 16));
   *esp -= sizeof(pp->argv);
-  *((unsigned int *)*esp) = argv_address;
+  *((char **)*esp) = argv_address;
   *esp -= sizeof(pp->argc);
-  *((unsigned int *)*esp) = pp->argc;
-  *esp -= 8; // TODO: to be decided 
+  *((int *)*esp) = pp->argc;
+  // *esp -= 8; // TODO: to be decided
 }
 
 int get_argc(const char *command_)
@@ -160,6 +159,7 @@ start_process(void *file_name_)
   palloc_free_page(file_name);
   if (!success)
     thread_exit();
+
   push_to_stack(&if_.esp, pp);
   free_process_param(pp);
 
@@ -185,7 +185,7 @@ start_process(void *file_name_)
 
    This function will be implemented in problem 2-2.  For now, it
    does nothing. */
-int process_wait(tid_t child_tid UNUSED)
+int process_wait(tid_t child_tid)
 {
   sema_down(&temporary);
   return 0;
