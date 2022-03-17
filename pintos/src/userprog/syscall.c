@@ -12,6 +12,7 @@
 #include "devices/input.h"
 #include "devices/shutdown.h"
 #include "userprog/process.h"
+#include "threads/vaddr.h"
 
 static void syscall_handler(struct intr_frame *);
 static void syscall_exit(struct intr_frame *, uint32_t *);
@@ -39,7 +40,14 @@ void syscall_init(void)
 static bool
 is_valid_ptr(const void *ptr)
 {
-  return ptr != NULL; // && is_user_vaddr(ptr);
+  return ptr != NULL && is_user_vaddr(ptr);
+}
+
+static void
+exit_error()
+{
+  printf("%s: exit(%d)\n", thread_current()->name, -1);
+  thread_exit();
 }
 
 #ifdef USERPROG
@@ -83,7 +91,7 @@ static void syscall_write(struct intr_frame *f, uint32_t *args)
       fd == 0 /* stdin */)
   {
     f->eax = -1;
-    return;
+    exit_error();
   }
 
   if (fd == 1 /* stdout */)
@@ -98,7 +106,7 @@ static void syscall_write(struct intr_frame *f, uint32_t *args)
   if (file_descriptor == NULL)
   {
     f->eax = -1;
-    return;
+    exit_error();
   }
 
   f->eax = file_write(file_descriptor->file, buffer, size);
@@ -113,7 +121,7 @@ static void syscall_create(struct intr_frame *f, uint32_t *args)
       !is_valid_ptr(file + strlen(file) - 1))
   {
     f->eax = -1;
-    return;
+    exit_error();
   }
 
   f->eax = filesys_create(file, initial_size);
@@ -127,7 +135,7 @@ static void syscall_remove(struct intr_frame *f, uint32_t *args)
       !is_valid_ptr(file + strlen(file) - 1))
   {
     f->eax = -1;
-    return;
+    exit_error();
   }
 
   f->eax = filesys_remove(file);
@@ -141,7 +149,7 @@ static void syscall_open(struct intr_frame *f, uint32_t *args)
       !is_valid_ptr(file + strlen(file) - 1))
   {
     f->eax = -1;
-    return;
+    exit_error();
   }
 
   struct file *opened_file = filesys_open(file);
@@ -149,7 +157,7 @@ static void syscall_open(struct intr_frame *f, uint32_t *args)
   if (opened_file == NULL)
   {
     f->eax = -1;
-    return;
+    exit_error();
   }
 
   struct thread *current_thread = thread_current();
@@ -168,7 +176,7 @@ static void syscall_filesize(struct intr_frame *f, uint32_t *args)
   if (fd == 0 || fd == 1)
   {
     f->eax = -1;
-    return;
+    exit_error();
   }
 
   file_descriptor_t *file_descriptor = find_file_descriptor(fd);
@@ -176,7 +184,7 @@ static void syscall_filesize(struct intr_frame *f, uint32_t *args)
   if (file_descriptor == NULL)
   {
     f->eax = -1;
-    return;
+    exit_error();
   }
 
   f->eax = file_length(file_descriptor->file);
@@ -193,7 +201,7 @@ static void syscall_read(struct intr_frame *f, uint32_t *args)
       fd == 1 /* stdout */)
   {
     f->eax = -1;
-    return;
+    exit_error();
   }
 
   if (fd == 0 /* stdin */)
@@ -211,7 +219,7 @@ static void syscall_read(struct intr_frame *f, uint32_t *args)
   if (file_descriptor == NULL)
   {
     f->eax = -1;
-    return;
+    exit_error();
   }
 
   f->eax = file_read(file_descriptor->file, buffer, size);
@@ -235,7 +243,7 @@ static void syscall_tell(struct intr_frame *f, uint32_t *args)
   if (file_descriptor == NULL)
   {
     f->eax = -1;
-    return;
+    exit_error();
   }
 
   f->eax = file_tell(file_descriptor->file);
@@ -250,7 +258,7 @@ static void syscall_close(struct intr_frame *f, uint32_t *args)
   if (file_descriptor == NULL)
   {
     f->eax = -1;
-    return;
+    exit_error();
   }
 
   file_close(file_descriptor->file);
@@ -294,7 +302,7 @@ static void syscall_exec(struct intr_frame *f, uint32_t *args)
       !is_valid_ptr(file + strlen(file) - 1))
   {
     f->eax = -1;
-    return;
+    exit_error();
   }
 
   f->eax = process_execute(file);
@@ -351,5 +359,5 @@ syscall_handler(struct intr_frame *f UNUSED)
     }
   }
 
-  NOT_REACHED();
+  exit_error();
 }
