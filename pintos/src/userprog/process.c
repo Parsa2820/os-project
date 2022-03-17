@@ -168,7 +168,7 @@ void invalid_file()
   struct thread *cur = thread_current();
   cur->wait_info->exit_status = -1;
   sema_up(&(cur->wait_info->wait));
-  exit_erro();
+  exit_error();
 }
 
 /* A thread function that loads a user process and starts it
