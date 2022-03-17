@@ -102,13 +102,13 @@ push_to_stack(void **esp, process_param_t *pp)
     **((char ***)esp) = addresses[i];
   }
 
-  char **argv_address = *esp; // 0xc0000000
+  char **argv_address = *esp;
   *esp = (unsigned int)*esp - ((int)((unsigned int)*esp % 16) + 8);
   *esp -= sizeof(pp->argv);
   *((char **)*esp) = argv_address;
   *esp -= sizeof(pp->argc);
   *((int *)*esp) = pp->argc;
-  *esp -= 4; // TODO: to be decided
+  *esp -= 4;
 }
 
 int get_argc(const char *command_)
