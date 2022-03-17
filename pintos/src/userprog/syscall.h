@@ -6,6 +6,8 @@
 
 void syscall_init(void);
 
+void exit_error();
+
 typedef void syscall_func_t(struct intr_frame *, uint32_t *);
 
 typedef struct syscall_descriptor

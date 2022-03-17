@@ -45,13 +45,12 @@ is_valid_ptr(const void *ptr)
 {
   return ptr != NULL && is_user_vaddr(ptr)
 #ifdef USERPROG
-  &&pagedir_get_page(thread_current()->pagedir, ptr) != NULL
+         && pagedir_get_page(thread_current()->pagedir, ptr) != NULL
 #endif
-;
+      ;
 }
 
-static void
-exit_error()
+void exit_error()
 {
   printf("%s: exit(%d)\n", thread_current()->name, -1);
   thread_exit();
