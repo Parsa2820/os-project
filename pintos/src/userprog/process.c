@@ -61,7 +61,7 @@ push_to_stack(void **esp, process_param_t *pp)
 {
   char *addresses[pp->argc];
 
-  for (int i = 0; i < pp->argc; i++)
+  for (int i = pp->argc-1; i >=0 ; i--)
   {
     *esp -= strlen(pp->argv[i]) + 1;
     memcpy(*esp, pp->argv[i], strlen(pp->argv[i]) + 1);
@@ -71,10 +71,10 @@ push_to_stack(void **esp, process_param_t *pp)
   *esp -= sizeof(addresses[0]);
   memset(*esp, 0, sizeof(addresses[0]));
 
-  for (int i = 0; i < pp->argc; i++)
+  for (int i = pp->argc-1; i >= 0; i--)
   {
     *esp -= sizeof(addresses[i]);
-    **((char ***)esp) = addresses[0];
+    **((char ***)esp) = addresses[i];
   }
 
   char **argv_address = *esp; // 0xc0000000
@@ -528,7 +528,7 @@ setup_stack(void **esp)
   {
     success = install_page(((uint8_t *)PHYS_BASE) - PGSIZE, kpage, true);
     if (success)
-      *esp = PHYS_BASE - INIT_STACK_SIZE;
+      *esp = PHYS_BASE;
     else
       palloc_free_page(kpage);
   }
