@@ -143,6 +143,37 @@ void thread_print_stats(void)
          idle_ticks, kernel_ticks, user_ticks);
 }
 
+struct thread *get_child_from_current_thread(tid_t tid)
+{
+  struct thread *cur = thread_current();
+  struct list_elem *e;
+  for (e = list_begin(&cur->children); e != list_end(&cur->children); e = list_next(e))
+  {
+    struct thread *child = list_entry(e, struct thread, sibling_elem);
+    if (child->tid == tid)
+      return child;
+  }
+  return NULL;
+}
+
+void *clean_up_finished_child(struct thread *child)
+{
+  list_remove(&child->sibling_elem);
+  free(child);
+}
+
+void add_child_to_current_thread(struct thread *child)
+{
+  struct thread *cur = thread_current();
+  child->parent = cur;
+  list_push_back(&cur->children, &child->sibling_elem);
+}
+
+void init_wait_semaphore(struct thread *child)
+{
+  sema_init(&child->wait, 0);
+}
+
 /* Creates a new kernel thread named NAME with the given initial
    PRIORITY, which executes FUNCTION passing AUX as the argument,
    and adds it to the ready queue.  Returns the thread identifier
@@ -195,6 +226,9 @@ tid_t thread_create(const char *name, int priority,
 
   /* Add to run queue. */
   thread_unblock(t);
+
+  add_child_to_current_thread(t);
+  init_wait_semaphore(t);
 
   return tid;
 }

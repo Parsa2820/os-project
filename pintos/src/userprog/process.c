@@ -18,7 +18,6 @@
 #include "threads/synch.h"
 #include "threads/thread.h"
 #include "threads/vaddr.h"
-// #include "threads/malloc.h"
 
 static struct semaphore temporary;
 static thread_func start_process NO_RETURN;
@@ -40,14 +39,14 @@ get_file_name(char *command_)
     if (command_[i] == ' ')
     {
       char *file_name = malloc(i + 2);
-      strlcpy(file_name, command_, i+1);
+      strlcpy(file_name, command_, i + 1);
       file_name[i + 2] = 0;
       return file_name;
     }
   }
   return command_;
-  
 }
+
 /* Starts a new thread running a user program loaded from
    FILENAME.  The new thread may be scheduled (and may even exit)
    before process_execute() returns.  Returns the new process's
@@ -203,8 +202,17 @@ start_process(void *file_name_)
    does nothing. */
 int process_wait(tid_t child_tid)
 {
-  sema_down(&temporary);
-  return 0;
+  struct thread *child = get_child_from_current_thread(child_tid);
+
+  if (child == NULL || child->parent != thread_current())
+  {
+    return -1;
+  }
+
+  sema_down(&child->wait);
+  int exit_status = child->exit_status;
+  clean_up_finished_child(child);
+  return exit_status;
 }
 
 /* Free the current process's resources. */
@@ -229,7 +237,7 @@ void process_exit(void)
     pagedir_activate(NULL);
     pagedir_destroy(pd);
   }
-  sema_up(&temporary);
+  sema_up(&cur->wait);
 }
 
 /* Sets up the CPU for running user code in the current

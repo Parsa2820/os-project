@@ -29,12 +29,12 @@ typedef int tid_t;
 /* File descriptor for thread open files */
 typedef struct file_descriptor
 {
-  /* low level file struct */
-  struct file *file; 
-  /* file descriptor number */
-  int fileno;
-  /* list node */
-  struct list_elem elem;
+   /* low level file struct */
+   struct file *file;
+   /* file descriptor number */
+   int fileno;
+   /* list node */
+   struct list_elem elem;
 } file_descriptor_t;
 
 /* A kernel thread or user process.
@@ -106,6 +106,7 @@ struct thread
    /* Shared between thread.c and synch.c. */
    struct list_elem elem; /* List element. */
 
+#define USERPROG
 #ifdef USERPROG
    /* Owned by userprog/process.c. */
    uint32_t *pagedir; /* Page directory. */
@@ -113,6 +114,16 @@ struct thread
    int last_fileno;
    /* File descriptor of the current thread stored as a doubly linked list */
    struct list file_descriptors;
+   /* Parent thread of the current thread */
+   struct thread *parent;
+   /* Child threads of the current thread stored as a doubly linked list */
+   struct list children;
+   /* A semaphore which is used to wait for the child threads to finish */
+   struct semaphore wait;
+   /* A list element for the sibling threads */
+   struct list_elem sibling_elem;
+   /* Process exit status */
+   int exit_status;
 #endif
 
    /* Owned by thread.c. */
@@ -154,5 +165,8 @@ int thread_get_nice(void);
 void thread_set_nice(int);
 int thread_get_recent_cpu(void);
 int thread_get_load_avg(void);
+
+struct thread *get_child_from_current_thread(tid_t);
+void *clean_up_finished_child(struct thread *);
 
 #endif /* threads/thread.h */
