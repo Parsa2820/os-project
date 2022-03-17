@@ -339,9 +339,8 @@ syscall_descriptor_t syscall_table[] = {
 static bool;
 is_valid_args(uint32_t *args)
 {
-  return is_valid_ptr(args) && is_valid_ptr(args+4);
+  return is_valid_ptr(args) && is_valid_ptr(args + 4);
 }
-
 
 static void
 syscall_handler(struct intr_frame *f UNUSED)
@@ -356,6 +355,7 @@ syscall_handler(struct intr_frame *f UNUSED)
   {
     exit_error();
   }
+
   /*
    * The following print statement, if uncommented, will print out the syscall
    * number whenever a process enters a system call. You might find it useful
