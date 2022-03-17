@@ -18,6 +18,7 @@
 #include "threads/synch.h"
 #include "threads/thread.h"
 #include "threads/vaddr.h"
+#include "userprog/syscall.h"
 
 static struct semaphore temporary;
 static thread_func start_process NO_RETURN;
@@ -162,6 +163,14 @@ void free_process_param(process_param_t *pp)
   free(pp);
 }
 
+void invalid_file()
+{
+  struct thread *cur = thread_current();
+  cur->wait_info->exit_status = -1;
+  sema_up(&(cur->wait_info->wait));
+  exit_erro();
+}
+
 /* A thread function that loads a user process and starts it
    running. */
 static void
@@ -182,7 +191,7 @@ start_process(void *file_name_)
   /* If load failed, quit. */
   palloc_free_page(file_name);
   if (!success)
-    thread_exit();
+    invalid_file();
 
   push_to_stack(&if_.esp, pp);
   free_process_param(pp);
@@ -211,8 +220,6 @@ start_process(void *file_name_)
    does nothing. */
 int process_wait(tid_t child_tid)
 {
-  // sema_down(&temporary);
-
   thread_wait_info_t *info = get_child_thread_wait_info(child_tid);
 
   if (info == NULL)
@@ -250,8 +257,6 @@ void process_exit(void)
   }
 
   sema_up(&cur->wait_info->wait);
-  
-  // sema_up(&temporary);
 }
 
 /* Sets up the CPU for running user code in the current
@@ -443,7 +448,6 @@ bool load(const char *file_name, void (**eip)(void), void **esp)
 
 done:
   /* We arrive here whether the load is successful or not. */
-  file_close(file);
   return success;
 }
 
