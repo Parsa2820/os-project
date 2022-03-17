@@ -14,6 +14,9 @@
 #include "userprog/process.h"
 #include "threads/vaddr.h"
 
+#ifdef USERPROG
+#include "userprog/pagedir.h"
+#endif
 static void syscall_handler(struct intr_frame *);
 static void syscall_exit(struct intr_frame *, uint32_t *);
 static void syscall_practice(struct intr_frame *, uint32_t *);
@@ -40,7 +43,11 @@ void syscall_init(void)
 static bool
 is_valid_ptr(const void *ptr)
 {
-  return ptr != NULL && is_user_vaddr(ptr);
+  return ptr != NULL && is_user_vaddr(ptr)
+#ifdef USERPROG
+  &&pagedir_get_page(thread_current()->pagedir, ptr) != NULL
+#endif
+;
 }
 
 static void
@@ -330,8 +337,16 @@ syscall_descriptor_t syscall_table[] = {
 static void
 syscall_handler(struct intr_frame *f UNUSED)
 {
-  uint32_t *args = ((uint32_t *)f->esp);
+  if (!is_valid_ptr(f->esp))
+  {
+    exit_error();
+  }
 
+  uint32_t *args = ((uint32_t *)f->esp);
+  if (!is_valid_ptr(args))
+  {
+    exit_error();
+  }
   /*
    * The following print statement, if uncommented, will print out the syscall
    * number whenever a process enters a system call. You might find it useful
