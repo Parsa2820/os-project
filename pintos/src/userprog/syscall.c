@@ -51,10 +51,11 @@ is_valid_ptr(const void *ptr)
       ;
 }
 
-static void
-exit_error()
+void exit_error()
 {
-  printf("%s: exit(%d)\n", thread_current()->name, -1);
+  struct thread *cur = thread_current();
+  cur->wait_info->exit_status = -1;
+  printf("%s: exit(%d)\n", cur->name, -1);
   thread_exit();
 }
 
@@ -165,7 +166,7 @@ static void syscall_open(struct intr_frame *f, uint32_t *args)
   if (opened_file == NULL)
   {
     f->eax = -1;
-    exit_error();
+    return;
   }
 
   struct thread *current_thread = thread_current();
