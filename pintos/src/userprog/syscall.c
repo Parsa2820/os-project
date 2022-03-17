@@ -1,5 +1,6 @@
 #include "userprog/syscall.h"
 #include <stdio.h>
+#include <stdlib.h>
 #include <syscall-nr.h>
 #include <string.h>
 #include "threads/interrupt.h"
@@ -45,9 +46,9 @@ is_valid_ptr(const void *ptr)
 {
   return ptr != NULL && is_user_vaddr(ptr)
 #ifdef USERPROG
-  &&pagedir_get_page(thread_current()->pagedir, ptr) != NULL
+         && pagedir_get_page(thread_current()->pagedir, ptr) != NULL
 #endif
-;
+      ;
 }
 
 static void
@@ -334,6 +335,13 @@ syscall_descriptor_t syscall_table[] = {
     {SYS_EXEC, &syscall_exec, 0},
 };
 
+static bool;
+is_valid_args(uint32_t *args)
+{
+  return is_valid_ptr(args) && is_valid_ptr(args+4);
+}
+
+
 static void
 syscall_handler(struct intr_frame *f UNUSED)
 {
@@ -343,7 +351,7 @@ syscall_handler(struct intr_frame *f UNUSED)
   }
 
   uint32_t *args = ((uint32_t *)f->esp);
-  if (!is_valid_ptr(args))
+  if (!is_valid_args(args))
   {
     exit_error();
   }
