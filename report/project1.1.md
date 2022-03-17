@@ -22,6 +22,7 @@
 ## Changes Compared to [The Design Document](../design/project1.1-design.md)
 ### Minor Changes
 - We used the already defined doubly linked list to store the data instead of custom one we had proposed. The reasoning behind this decision is that the mentioned liked list has been implemented in a generic manner and was easy to use.
+- We did not use wait lock which was mentioned in the design document because we found it to be unnecessary.
 ### New Data Structures
 We added a new data structure in order to store related system call information.
 ```c
@@ -36,6 +37,20 @@ typedef struct syscall_descriptor
 } syscall_descriptor_t;
 ```
 The reason for this decision is the convinence of adding a new system call without changing the code. This somehow ressembles to the open/close principle in object oriented programming.
+
+We also aggregatted thread wait information in struct bellow.
+```c
+typedef struct thread_wait_info
+{
+   tid_t tid;
+   /* A semaphore which is used to wait for the child threads to finish */
+   struct semaphore wait;
+   /* A list element for the sibling threads */
+   struct list_elem sibling_elem;
+   /* Process exit status */
+   int exit_status;
+} thread_wait_info_t;
+```
 
 ## Group Members Contributions
 - Parsa Mohammadian: Implementing system calls on files and also "practice" and "halt" commands and creation of the report file, all in collaboration with Ms. Azarnoosh; also assisting Mr. Yazdanparast in the implementation of "wait" and "exec" commands.
