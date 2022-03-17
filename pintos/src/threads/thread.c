@@ -482,6 +482,7 @@ init_thread(struct thread *t, const char *name, int priority)
 
   list_init(&t->children);
   list_init(&t->file_descriptors);
+  t->last_fileno = 3;
 }
 
 /* Allocates a SIZE-byte frame at the top of thread T's stack and
