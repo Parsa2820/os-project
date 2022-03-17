@@ -282,8 +282,8 @@ static void syscall_halt(struct intr_frame *f, uint32_t *args)
 
 static void syscall_wait(struct intr_frame *f, uint32_t *args)
 {
-  // pid_t pid = args[1];
-  // f->eax = process_wait(pid);
+  tid_t pid = args[1];
+  f->eax = process_wait(pid);
 }
 
 static void syscall_exec(struct intr_frame *f, uint32_t *args)

@@ -37,6 +37,17 @@ typedef struct file_descriptor
    struct list_elem elem;
 } file_descriptor_t;
 
+typedef struct thread_wait_info
+{
+   tid_t tid;
+   /* A semaphore which is used to wait for the child threads to finish */
+   struct semaphore wait;
+   /* A list element for the sibling threads */
+   struct list_elem sibling_elem;
+   /* Process exit status */
+   int exit_status;
+} thread_wait_info_t;
+
 /* A kernel thread or user process.
 
    Each thread structure is stored in its own 4 kB page.  The
@@ -118,12 +129,7 @@ struct thread
    struct thread *parent;
    /* Child threads of the current thread stored as a doubly linked list */
    struct list children;
-   /* A semaphore which is used to wait for the child threads to finish */
-   struct semaphore wait;
-   /* A list element for the sibling threads */
-   struct list_elem sibling_elem;
-   /* Process exit status */
-   int exit_status;
+   thread_wait_info_t *wait_info;
 #endif
 
    /* Owned by thread.c. */
@@ -143,6 +149,7 @@ void thread_print_stats(void);
 
 typedef void thread_func(void *aux);
 tid_t thread_create(const char *name, int priority, thread_func *, void *);
+struct thread *thread_create_aux(const char *name, int priority, thread_func *, void *);
 
 void thread_block(void);
 void thread_unblock(struct thread *);
@@ -166,7 +173,7 @@ void thread_set_nice(int);
 int thread_get_recent_cpu(void);
 int thread_get_load_avg(void);
 
-struct thread *get_child_from_current_thread(tid_t);
-void *clean_up_finished_child(struct thread *);
+thread_wait_info_t *get_child_thread_wait_info(tid_t);
+void clean_up_thread_wait_info(thread_wait_info_t *);
 
 #endif /* threads/thread.h */

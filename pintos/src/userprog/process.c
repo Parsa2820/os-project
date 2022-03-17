@@ -54,7 +54,7 @@ get_file_name(char *command_)
 tid_t process_execute(const char *file_name)
 {
   char *fn_copy;
-  tid_t tid;
+  struct thread *t;
   char *file_name_only = get_file_name(file_name);
   sema_init(&temporary, 0);
   /* Make a copy of FILE_NAME.
@@ -65,10 +65,19 @@ tid_t process_execute(const char *file_name)
   strlcpy(fn_copy, file_name, PGSIZE);
 
   /* Create a new thread to execute FILE_NAME. */
-  tid = thread_create(file_name_only, PRI_DEFAULT, start_process, fn_copy);
-  if (tid == TID_ERROR)
+  t = thread_create_aux(file_name_only, PRI_DEFAULT, start_process, fn_copy);
+  if (t->tid == TID_ERROR)
     palloc_free_page(fn_copy);
-  return tid;
+
+  thread_wait_info_t *wait_info = malloc(sizeof(thread_wait_info_t));
+  wait_info->tid = t->tid;
+  sema_init(&wait_info->wait, 0);
+  struct thread *cur = thread_current();
+  list_push_back(&cur->children, &wait_info->sibling_elem);
+
+  t->wait_info = wait_info;
+
+  return t->tid;
 }
 
 static void
@@ -202,16 +211,18 @@ start_process(void *file_name_)
    does nothing. */
 int process_wait(tid_t child_tid)
 {
-  struct thread *child = get_child_from_current_thread(child_tid);
+  // sema_down(&temporary);
 
-  if (child == NULL || child->parent != thread_current())
+  thread_wait_info_t *info = get_child_thread_wait_info(child_tid);
+
+  if (info == NULL)
   {
     return -1;
   }
 
-  sema_down(&child->wait);
-  int exit_status = child->exit_status;
-  clean_up_finished_child(child);
+  sema_down(&info->wait);
+  int exit_status = info->exit_status;
+  clean_up_thread_wait_info(info);
   return exit_status;
 }
 
@@ -237,7 +248,10 @@ void process_exit(void)
     pagedir_activate(NULL);
     pagedir_destroy(pd);
   }
-  sema_up(&cur->wait);
+
+  sema_up(&cur->wait_info->wait);
+  
+  // sema_up(&temporary);
 }
 
 /* Sets up the CPU for running user code in the current

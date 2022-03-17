@@ -143,35 +143,23 @@ void thread_print_stats(void)
          idle_ticks, kernel_ticks, user_ticks);
 }
 
-struct thread *get_child_from_current_thread(tid_t tid)
+thread_wait_info_t *get_child_thread_wait_info(tid_t tid)
 {
   struct thread *cur = thread_current();
   struct list_elem *e;
   for (e = list_begin(&cur->children); e != list_end(&cur->children); e = list_next(e))
   {
-    struct thread *child = list_entry(e, struct thread, sibling_elem);
-    if (child->tid == tid)
-      return child;
+    thread_wait_info_t *child_wait_info = list_entry(e, thread_wait_info_t, sibling_elem);
+    if (child_wait_info->tid == tid)
+      return child_wait_info;
   }
   return NULL;
 }
 
-void *clean_up_finished_child(struct thread *child)
+void clean_up_thread_wait_info(thread_wait_info_t *child_wait_info)
 {
-  list_remove(&child->sibling_elem);
-  free(child);
-}
-
-void add_child_to_current_thread(struct thread *child)
-{
-  struct thread *cur = thread_current();
-  child->parent = cur;
-  list_push_back(&cur->children, &child->sibling_elem);
-}
-
-void init_wait_semaphore(struct thread *child)
-{
-  sema_init(&child->wait, 0);
+  list_remove(&child_wait_info->sibling_elem);
+  free(child_wait_info);
 }
 
 /* Creates a new kernel thread named NAME with the given initial
@@ -189,8 +177,8 @@ void init_wait_semaphore(struct thread *child)
    The code provided sets the new thread's `priority' member to
    PRIORITY, but no actual priority scheduling is implemented.
    Priority scheduling is the goal of Problem 1-3. */
-tid_t thread_create(const char *name, int priority,
-                    thread_func *function, void *aux)
+struct thread *thread_create_aux(const char *name, int priority,
+                                 thread_func *function, void *aux)
 {
   struct thread *t;
   struct kernel_thread_frame *kf;
@@ -227,10 +215,16 @@ tid_t thread_create(const char *name, int priority,
   /* Add to run queue. */
   thread_unblock(t);
 
-  add_child_to_current_thread(t);
-  init_wait_semaphore(t);
+  list_init(&t->children);
+  list_init(&t->file_descriptors);
 
-  return tid;
+  return t;
+}
+
+tid_t thread_create(const char *name, int priority,
+                    thread_func *function, void *aux)
+{
+  return thread_create_aux(name, priority, function, aux)->tid;
 }
 
 /* Puts the current thread to sleep.  It will not be scheduled
