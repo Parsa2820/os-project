@@ -24,22 +24,62 @@
 
 >> پرسش اول: تعریف `struct`های جدید، `struct`های تغییر داده شده، متغیرهای گلوبال یا استاتیک، `typedef`ها یا `enumeration`ها را در اینجا آورده و برای هریک در 25 کلمه یا کمتر توضیح بنویسید.
 
+timer.c
+```c
+static struct list sleep_list; //sorted linked list of all sleeping threads by time to wake up
+static struct lock sleep_lock; //lock on all sleeping threads
+```
+
+thread.c
+
+    
+    
+```c
+struct thread {
+    ...
+    int64_t wakeup_time; //time to wake up
+
+};
+
+int64_t wake_up_time() {} // return current_tick + ticks;
+
+```
+
 ### الگوریتم
 
 >> پرسش دوم: به اختصار آن‌چه هنگام صدا زدن تابع `timer_sleep()` رخ می‌دهد و همچنین اثر `timer interrupt handler` را توضیح دهید.
-
+```
+`timer_sleep()`
+When a thread calls `timer_sleep()`, it should determine the time it should be woken up and save it in `wakeup_time` with `wake_up_time()`.
+After that, it should get `sleep_lock` and use `list_insert_ordered()` to insert the current thread into the proper spot in `sleep_list`.
+Finally, `thread_block()` should be called to puts the current thread to sleep.  
+```
+```
+`timer interrupt handler`
+It should determine if `sleep_lock` is currently in use.
+If not, it should pop any threads that need to be unblocked from the `sleep_list` and unblock them. 
+```
 >> پرسش سوم: مراحلی که برای کوتاه کردن زمان صرف‌شده در `timer interrupt handler` صرف می‌شود را نام ببرید.
-
+```
+The `sleep_list` is sorted according to `wakeup_time` and always updated. Thus, each time the list control goes from the beginning to the first place where `wakeup_time` is no longer greater than the current number of timer ticks, it does not check the rest.
+```
 ### همگام‌سازی
 
 >> پرسش چهارم: هنگامی که چند ریسه به طور همزمان `timer_sleep()` را صدا می‌زنند، چگونه از `race condition` جلوگیری می‌شود؟
-
+```
+We introduced `sleep_lock` because if a thread is traversing `sleep_list` and a timer interrupt happens, it may pop numerous elements off the list, leaving the thread with invalid pointers.
+`Timer_interrupt()`, on the other hand, operates in an external interrupt context. Thus it will check whether the lock is held but will not need to acquire it. 
+```
 >> پرسش پنجم: هنگام صدا زدن `timer_sleep()` اگر یک وقفه ایجاد شود چگونه از `race condition` جلوگیری می‌شود؟
-
+```
+To avoid race conditions, we disable interrupts at the beginning of `timer_sleep()`.
+```
 ### منطق
 
 >> پرسش ششم: چرا این طراحی را استفاده کردید؟ برتری طراحی فعلی خود را بر طراحی‌های دیگری که مدنظر داشته‌اید بیان کنید.
-
+```
+we use a sorted linked list for `sleep_list` since it reduced the time spent in the handler with interrupts disabled from O(log n) to O(1).
+```
 ## زمان‌بند اولویت‌دار
 
 ### داده ساختارها
