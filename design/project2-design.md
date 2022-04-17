@@ -78,7 +78,7 @@ To avoid race conditions, we disable interrupts at the beginning of `timer_sleep
 
 >> پرسش ششم: چرا این طراحی را استفاده کردید؟ برتری طراحی فعلی خود را بر طراحی‌های دیگری که مدنظر داشته‌اید بیان کنید.
 ```
-we use a sorted linked list for `sleep_list` since it reduced the time spent in the handler with interrupts disabled from O(log n) to O(1).
+we use a sorted linked list for `sleep_list` since it reduced the time spent in the handler with interrupts disabled from O(logn) to O(1).
 ```
 ## زمان‌بند اولویت‌دار
 
