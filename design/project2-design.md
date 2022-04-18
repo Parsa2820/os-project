@@ -81,6 +81,7 @@ To avoid race conditions, we disable interrupts at the beginning of `timer_sleep
 we use a sorted linked list for `sleep_list` since it reduced the time spent in the handler with interrupts disabled from O(logn) to O(1).
 ```
 
+## زمان‌بند اولویت‌دار
 
 ### داده ساختارها
 
