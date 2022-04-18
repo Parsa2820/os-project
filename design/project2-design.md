@@ -4,13 +4,13 @@
 
 >> نام، نام خانوادگی و ایمیل خود را در ادامه وارد کنید.
 
-نام نام خانوادگی <email@domain.example>
+پارسا محمدیان <parsa2820@gmail.com>
 
-نام نام خانوادگی <email@domain.example>
+آرین یزدان‌پرست <arian.yazdan2001@gmail.com>
 
-نام نام خانوادگی <email@domain.example>
+سارا آذرنوش <azarnooshsa@gmail.com> 
 
-نام نام خانوادگی <email@domain.example>
+کسری امانی <kasra138079@gmail.com>
 
 ## مقدمه
 
