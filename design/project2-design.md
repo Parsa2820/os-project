@@ -257,6 +257,59 @@ As comments suggest, this function is called by the timer interrupt handler and 
 
 >> پرسش یازدهم: یک پیاده‌سازی کاملا کاربردی و درست این پروژه را در نظر بگیرید که فقط یک مشکل درون تابع ‍`sema_up()` دارد. با توجه به نیازمندی‌های پروژه سمافورها(و سایر متغیرهای به‌هنگام‌سازی) باید ریسه‌های با اولویت بالاتر را بر ریسه‌های با اولویت پایین‌تر ترجیح دهند. با این حال پیاده‌سازی ریسه‌های با اولویت بالاتر را براساس اولویت مبنا `Base Priority` به جای اولویت موثر ‍`Effective Priority` انتخاب می‌کند. اساسا اهدای اولویت زمانی که سمافور تصمیم می‌گیرد که کدام ریسه رفع مسدودیت شود، تاثیر داده نمی‌شود. تستی طراحی کنید که وجود این باگ را اثبات کند. تست‌های `Pintos` شامل کد معمولی در سطح هسته (مانند متغیرها، فراخوانی توابع، جملات شرطی و ...) هستند و می‌توانند متن چاپ کنند و می‌توانیم متن چاپ شده را با خروجی مورد انتظار مقایسه کنیم و اگر متفاوت بودند، وجود مشکل در پیاده‌سازی اثبات می‌شود. شما باید توضیحی درباره این که تست چگونه کار می‌کند، خروجی مورد انتظار و خروجی واقعی آن فراهم کنید.
 
+The following pseudocode exploits this bug. In this test, first `thread_a` starts executing and it occupy `another_sema`. Then `thread_b` starts executing and occupy `sema` and waits on `another_sema`. Then `thread_c` starts executing and waits on `sema`. Then `thread_d` starts executing and waits for `sema`. When `thread_a` finishes, `thread_b` and `thread_c` are both waiting for `another_sema`. Although `thread_c` base priority is higher than `thread_b`, `thread_b` should be scheduled first because `thread_d` which base priority is higher than `thread_c` is waiting on `sema` which is occupied by `thread_b`. 
+
+```python
+sema = sema(1)
+anoter_sema = sema(1)
+
+def func(x):
+    sema_down(sema)
+    print(x)
+    sema_up(sema)
+
+def another_func(x):
+    sema_down(another_sema)
+    print(x)
+    sema_up(another_sema)
+
+def yet_another_func(x):
+    sema_down(sema)
+    sema_down(another_sema)
+    print(x)
+    sema_up(another_sema)
+    sema_up(sema)
+
+thread_a = thread(target=another_func, args=("thread_a",), priority=1)
+thread_b = thread(target=yet_another_func, args=("thread_b",), priority=2)
+thread_c = thread(target=another_func, args=("thread_c",), priority=3)
+thread_d = thread(target=func, args=("thread_d",), priority=4)
+thread_a.start()
+thread_b.start()
+thread_c.start()
+thread_d.start()
+```
+
+Expected output:
+
+```
+thread_a
+thread_b
+thread_c
+thread_d
+```
+
+The last two lines of the above output can be swapped and it does not really matter. The important bug is that `thread_b` executes before `thread_c`.
+
+Real buggy output:
+
+```
+thread_a
+thread_c
+thread_b
+thread_d
+```
+
 ## سوالات نظرسنجی
 
 پاسخ به این سوالات دلخواه است، اما به ما برای بهبود این درس در ادامه کمک خواهد کرد. نظرات خود را آزادانه به ما بگوئید—این سوالات فقط برای سنجش افکار شماست. ممکن است شما بخواهید ارزیابی خود از درس را به صورت ناشناس و در انتهای ترم بیان کنید.
