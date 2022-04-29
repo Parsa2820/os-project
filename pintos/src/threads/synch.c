@@ -192,9 +192,33 @@ lock_init (struct lock *lock)
   sema_init (&lock->semaphore, 1);
 }
 
+bool
 is_head (struct list_elem *elem)
 {
   return elem != NULL && elem->prev == NULL && elem->next != NULL;
+}
+
+bool
+is_tail (struct list_elem *elem)
+{
+  return elem != NULL && elem->prev != NULL && elem->next == NULL;
+}
+
+
+void recursive_priority_donation(struct lock * lock){
+    struct lock * waiting_lock = lock->holder->waiting; 
+    struct list_elem * waiting_lock_elem = &(waiting_lock -> elem);
+    if (waiting_lock != NULL){
+      struct thread * waiting_holder = waiting_lock->holder;
+      if (waiting_holder->priority < lock -> priority){
+        waiting_holder->priority = lock -> priority;
+        waiting_lock->priority = lock -> priority;
+      }
+    }
+    if (waiting_lock->holder->waiting != NULL){
+      recursive_priority_donation(waiting_lock);
+    }
+
 }
 
 /* Acquires LOCK, sleeping until it becomes available if
@@ -231,11 +255,7 @@ lock_acquire (struct lock *lock)
       }
     }
     if (lock->holder->waiting != NULL){
-      struct thread * waiting_holder = lock->holder->waiting->holder;
-      if (waiting_holder->priority < curr_thread -> priority){
-        waiting_holder->priority = curr_thread -> priority;
-        lock->holder->waiting->priority = curr_thread -> priority;
-      }
+      recursive_priority_donation(lock);
     }
   }
   curr_thread -> waiting = lock;
