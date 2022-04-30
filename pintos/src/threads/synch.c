@@ -101,7 +101,8 @@ sema_try_down (struct semaphore *sema)
   return success;
 }
 
-bool compare_priority (struct list_elem * t1_elem, struct list_elem * t2_elem, void*aux){
+bool
+compare_priority (struct list_elem * t1_elem, struct list_elem * t2_elem, void*aux){
   struct thread * t1 = list_entry(t1_elem, struct thread, elem);
   struct thread * t2 = list_entry(t2_elem, struct thread, elem);
   return t2->priority > t1->priority;
@@ -123,7 +124,6 @@ sema_up (struct semaphore *sema)
     struct list_elem * max_thread = list_max(&sema->waiters, compare_priority, aux);
     list_remove(max_thread);
     struct thread * t =list_entry (max_thread, struct thread, elem);  
-    //printf("\n%s %d %d\n", t->name,t->priority, thread_current()->priority);
     thread_unblock (t);
   }
   sema->value++;
@@ -205,7 +205,8 @@ is_tail (struct list_elem *elem)
 }
 
 
-void recursive_priority_donation(struct lock * lock){
+void 
+recursive_priority_donation(struct lock * lock){
     struct lock * waiting_lock = lock->holder->waiting; 
     struct list_elem * waiting_lock_elem = &(waiting_lock -> elem);
     if (waiting_lock != NULL){
@@ -389,7 +390,8 @@ cond_wait (struct condition *cond, struct lock *lock)
    make sense to try to signal a condition variable within an
    interrupt handler. */
 
-bool compare_cond_threads(struct list_elem* s1,struct list_elem * s2){
+bool 
+compare_cond_threads(struct list_elem* s1,struct list_elem * s2){
   struct semaphore_elem * s_elem1 = list_entry(s1, struct semaphore_elem, elem);
   struct semaphore_elem * s_elem2 = list_entry(s2, struct semaphore_elem, elem);
   return s_elem2->thread->priority > s_elem1->thread->priority;

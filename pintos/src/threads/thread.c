@@ -4,7 +4,6 @@
 #include <random.h>
 #include <stdio.h>
 #include <string.h>
-//#include "../lib/kernel/console.c"
 
 #include "threads/flags.h"
 #include "threads/interrupt.h"
@@ -95,18 +94,11 @@ thread_init (void)
   lock_init (&tid_lock);
   list_init (&ready_list);
   list_init (&all_list);
-  //printf("\nhala injam\n");
   /* Set up a thread structure for the running thread. */
   initial_thread = running_thread ();
-  //printf("\nhala injam2\n");
   init_thread (initial_thread, "main", PRI_DEFAULT);
-  //printf("\nhala injam3\n");
   initial_thread->status = THREAD_RUNNING;
-  //acquire_console();
-  //printf("\nhala injam4\n");
   initial_thread->tid = allocate_tid ();
-  //release_console();
-  //printf("\nhala injam5\n");
 }
 
 /* Starts preemptive thread scheduling by enabling interrupts.
@@ -247,8 +239,7 @@ thread_unblock (struct thread *t)
   old_level = intr_disable ();
   ASSERT (t->status == THREAD_BLOCKED);
   list_push_back (&ready_list, &t->elem);
-  
-  //printf("\n%s\n", t->name);
+
   t->status = THREAD_READY;
   intr_set_level (old_level);
 }
@@ -537,8 +528,6 @@ next_thread_to_run (void)
     struct list_elem * max_thread = list_max(&ready_list, compare_priority, aux);
     list_remove(max_thread);
     struct thread * t = list_entry(max_thread, struct thread, elem);
-    //if (!strcmp(t->name,"main"))
-    //  printf("\n\n%d\n\n", list_size(&ready_list));
     return t;
   }
 
@@ -613,7 +602,7 @@ schedule (void)
   if (cur != next)
     prev = switch_threads (cur, next);
     
-  //printf("\n%s\n", next->name);
+
   thread_schedule_tail (prev);
 }
 
