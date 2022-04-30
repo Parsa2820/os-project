@@ -27,9 +27,6 @@ static unsigned loops_per_tick;
 /* sorted doubly linked list of sleeping threads */
 static struct list sleep_list;
 
-/* lock for sleep_list */
-static struct lock sleep_lock;
-
 static intr_handler_func timer_interrupt;
 static bool too_many_loops (unsigned loops);
 static void busy_wait (int64_t loops);
@@ -43,7 +40,6 @@ timer_init (void)
 {
   pit_configure_channel (0, 2, TIMER_FREQ);
   intr_register_ext (0x20, timer_interrupt, "8254 Timer");
-  lock_init (&sleep_lock);
   list_init (&sleep_list);
 }
 
@@ -116,9 +112,7 @@ void
 timer_sleep (int64_t ticks)
 {
   ASSERT (intr_get_level () == INTR_ON);
-  enum intr_level old_intr_level = intr_get_level ();
   enum intr_level _intr_level = intr_disable ();
-  intr_set_level (_intr_level);
 
   if (ticks <= 0)
   {
@@ -127,11 +121,9 @@ timer_sleep (int64_t ticks)
 
   struct thread *cur = thread_current ();
   cur->wakeup_time = calcualte_wake_up_time (ticks);
-  lock_acquire (&sleep_lock);
   list_insert_ordered (&sleep_list, &cur->elem, thread_wakeup_time_less, NULL);
-  lock_release (&sleep_lock);
   thread_block ();
-  intr_set_level (old_intr_level);
+  intr_set_level (_intr_level);
 }
 
 /* Sleeps for approximately MS milliseconds.  Interrupts must be
@@ -211,8 +203,6 @@ timer_interrupt (struct intr_frame *args UNUSED)
   ticks++;
   thread_tick ();
   
-  lock_acquire (&sleep_lock);
-  
   while (!list_empty (&sleep_list))
   {
     struct thread *cur = list_entry (list_pop_front (&sleep_list), struct thread, elem);
@@ -226,8 +216,6 @@ timer_interrupt (struct intr_frame *args UNUSED)
       break;
     }
   }
-
-  lock_release (&sleep_lock);
 }
 
 /* Returns true if LOOPS iterations waits for more than one timer
