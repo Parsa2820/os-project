@@ -20,7 +20,11 @@
 ## Changes Compared to [The Design Document](../design/project2-design.md)
 ### Sleep timer
 
-in the beginning and when the target design was written, a lock was implemented to handle a specific race condition but in practice this condition never occurred, so the lock was removed to make the implementation code as simple as possible.
+In the beginning and when the target design was written, a lock was implemented to handle a specific race condition but in practice this condition never occurred, so the lock was removed to make the implementation code as simple as possible.
+
+### Priority scheduling
+
+The "struct * lock waiting" parameter has been added to the thread struct. This parameter is added to specify the lock that the thread is waiting for, and it is used to donate nested priority. The "list_elem elem" parameter has been added to the lock struct so that the linked list feature in the "acquired_locks" list can be used. The "struct thread * thread" parameter has been added to the "semaphore_elem" struct so that a thread with higher priority in the conditional variables waiting can be selected.
 
 ## Group Members Contributions
 - Parsa Mohammadian: Scheduling labratory
