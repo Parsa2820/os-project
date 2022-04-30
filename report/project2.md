@@ -5,7 +5,8 @@
   - [Table of Contents](#table-of-contents)
   - [Contributers](#contributers)
   - [Changes Compared to The Design Document](#changes-compared-to-the-design-document)
-     - [Sleep timer](#sleep-timer)
+    - [Sleep timer](#sleep-timer)
+    - [Priority scheduling](#priority-scheduling)
   - [Group Members Contributions](#group-members-contributions)
 
 ## Contributers
