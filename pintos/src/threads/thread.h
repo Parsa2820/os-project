@@ -117,6 +117,7 @@ struct thread
    /* Shared between thread.c and synch.c. */
    struct list_elem elem; /* List element. */
 
+   thread_wait_info_t *wait_info;
 #ifdef USERPROG
    /* Owned by userprog/process.c. */
    uint32_t *pagedir; /* Page directory. */
@@ -128,7 +129,7 @@ struct thread
    struct thread *parent;
    /* Child threads of the current thread stored as a doubly linked list */
    struct list children;
-   thread_wait_info_t *wait_info;
+   
 #endif
 
    /* Owned by thread.c. */

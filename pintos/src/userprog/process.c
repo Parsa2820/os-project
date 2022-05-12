@@ -64,20 +64,24 @@ tid_t process_execute(const char *file_name)
   if (fn_copy == NULL)
     return TID_ERROR;
   strlcpy(fn_copy, file_name, PGSIZE);
-
+  thread_wait_info_t *wait_info = malloc(sizeof(thread_wait_info_t));
+  wait_info->exit_status = 0;
+  sema_init(&(wait_info->wait), 0);
+  
   /* Create a new thread to execute FILE_NAME. */
   t = thread_create_aux(file_name_only, PRI_DEFAULT, start_process, fn_copy);
   if (t->tid == TID_ERROR)
     palloc_free_page(fn_copy);
 
-  thread_wait_info_t *wait_info = malloc(sizeof(thread_wait_info_t));
-  wait_info->tid = t->tid;
-  sema_init(&wait_info->wait, 0);
-  struct thread *cur = thread_current();
-  list_push_back(&cur->children, &wait_info->sibling_elem);
-
   t->wait_info = wait_info;
+  wait_info->tid = t->tid;
+  struct thread *cur = thread_current();
+  list_push_back(&cur->children, &t->wait_info->sibling_elem);
 
+  sema_down(&(t->wait_info->wait));
+  if (wait_info->exit_status == -1){
+    return -1;
+  } 
   return t->tid;
 }
 
@@ -193,6 +197,9 @@ start_process(void *file_name_)
   if (!success)
     invalid_file();
 
+  struct thread *cur = thread_current();
+  sema_up(&(cur->wait_info->wait));
+  
   push_to_stack(&if_.esp, pp);
   free_process_param(pp);
 
@@ -220,7 +227,7 @@ start_process(void *file_name_)
    does nothing. */
 int process_wait(tid_t child_tid)
 {
-  thread_wait_info_t *info = get_child_thread_wait_info(child_tid);
+  thread_wait_info_t *info= get_child_thread_wait_info(child_tid);
 
   if (info == NULL)
   {
