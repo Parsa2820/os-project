@@ -307,14 +307,21 @@ static void syscall_exec(struct intr_frame *f, uint32_t *args)
 {
   const char *file = (const char *)args[1];
 
-  if (!is_valid_ptr(file) ||
-      !is_valid_ptr(file + strlen(file) - 1))
+  if (is_valid_ptr(file))
   {
+    void* ph_adr = pagedir_get_page(thread_current()->pagedir, file);
+    if (is_valid_ptr(file + strlen(ph_adr))){
+        f->eax = process_execute(file);
+    }else{
+      f->eax = -1;
+      exit_error();
+    }
+  }else {
     f->eax = -1;
     exit_error();
   }
 
-  f->eax = process_execute(file);
+  
 }
 
 syscall_descriptor_t syscall_table[] = {
