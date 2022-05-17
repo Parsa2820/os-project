@@ -48,21 +48,83 @@
 
 >> در این قسمت تعریف هر یک از `struct` ها، اعضای `struct` ها، متغیرهای سراسری یا ایستا، `typedef` ها یا `enum` هایی که ایجاد کرده‌اید یا تغییر داده‌اید را بنویسید و دلیل هر کدام را در حداکثر ۲۵ کلمه توضیح دهید.
 
+All the changes are in `inode.c`.
+
+**Additions**
+```c
+#define DIRECT_BLOCKS 8
+```
+```c
+typedef enum {
+    INODE_TYPE_FILE,
+    INODE_TYPE_DIRECTORY
+} inode_type_t;
+```
+This enum is used to distinguish between files and directories in `struct inode_disk`.
+
+**Modifications**
+```c
+/* On-disk inode. 
+Must be exactly BLOCK_SECTOR_SIZE bytes long. */
+struct inode_disk
+{
+    off_t length;         /* File size in bytes. */
+    unsigned magic;       /* Magic number. */
+    inode_type_t type;    /* Type of the inode */
+    block_sector_t data[DIRECT_BLOCKS]; /* Direct blocks */
+    block_sector_t indirect; /* Indirect block */
+    block_sector_t double_indirect; /* Double indirect block */
+    uint32_t unused[115]; /* Not used. */
+};
+```
+Here we used [FFS](https://dsf.berkeley.edu/cs262/FFS-annotated.pdf) paper as reference to determine the structure of `struct inode_disk`. As mentioned in this paper, we used 8 direct blocks, a indirect block, and a double indirect block.
+
+The size of the variable `unused` is equals to:
+$$125+1-8-2-1=115$$
+```c
+/* In-memory inode. */
+struct inode
+{
+    struct list_elem elem;  /* Element in inode list. */
+    block_sector_t sector;  /* Sector number of disk location. */
+    int open_cnt;           /* Number of openers. */
+    bool removed;           /* True if deleted, false otherwise. */
+    int deny_write_cnt;     /* 0: writes ok, >0: deny writes. */
+    struct inode_disk data; /* Inode content. */
+    int readers;            /* Number of readers. */
+    struct lock write_lock; /* Lock for write operations. */
+    struct condition cond;  /* Conditional variable for waiting writers. */
+};
+```
+The members `readers`, `write_lock`, and `cond` are added to `struct inode`. The reason for this is explained in the next section.
+
 >> بیشترین سایز فایل پشتیبانی شده توسط ساختار inode شما چقدر است؟
+$$
+(8 + 128 + 128 \times 128) \times 512 = 8458240~B = 8.4~MB
+$$
+So possible maximum size of the file is 8.4 MB.
 
 همگام سازی
 ----------
 
 >> توضیح دهید که اگر دو پردازه بخواهند یک فایل را به طور همزمان گسترش دهند، کد شما چگونه از حالت مسابقه جلوگیری می‌کند.
 
+As mentioned before, `write_lock` is added to `struct inode`. Every process wishing to write to a file must acquire this lock before writing to the file. So the mentioned race condition is irrelevant.
+
 >> فرض کنید دو پردازه‌ی A و B فایل F را باز کرده‌اند و هر دو به end-of-file اشاره کرده‌اند. اگر  همزمان A از F بخواند و B روی آن بنویسد، ممکن است که A تمام، بخشی یا هیچ چیز از اطلاعات نوشته شده توسط B را بخواند. همچنین A نمی‌تواند چیزی جز اطلاعات نوشته شده توسط B را بخواند. مثلا اگر B تماما ۱ بنویسد، A نیز باید تماما ۱ بخواند. توضیح دهید کد شما چگونه از این حالت مسابقه جلوگیری می‌کند.
 
+Every process wishing to read a file, just check if the `write_lock` is held by any other process. If it is held, then the process must wait until the `write_lock` is released. Otherwise, the process can read the file. This mechanism can handle the case where a process is writing to a file and another process wants to read from the same file. What if a process is reading from a file and another process wants to write to the same file? For this situation, we have introduced `readers` member in `struct inode`. This member is used to count the number of processes reading from the file. A process wishing to write to a file must wait until the `readers` is zero. For this purpose we used `cond` member in `struct inode`.
+
 >> توضیح دهید همگام سازی شما چگونه "عدالت" را برقرار می‌کند. فایل سیستمی "عادل" است که خواننده‌های اطلاعات به صورت ناسازگار نویسنده‌های اطلاعات را مسدود نکنند و برعکس. بدین ترتیب اگر تعدادی بسیار زیاد پردازه‌هایی که از یک فایل می‌خوانند نمی‌توانند تا ابد مانع نوشده شدن اطلاعات توسط یک پردازه‌ی دیگر شوند و برعکس.
+
+Processes wishing to read from a file must wait if one or more processes wants to write to the same file and waiting for some other processes to finish their operation. This way fairness is guaranteed.
 
 منطق طراحی
 ----------
 
 >> آیا ساختار `inode` شما از طبقه‌بندی چند سطحه پشتیبانی می‌کند؟ اگر بله، دلیل خود را برای انتخاب این ترکیب خاص از بلوک‌های مستقیم، غیر مستقیم و غیر مستقیم دوطرفه توضیح دهید.‌ اگر خیر، دلیل خود برای انتخاب ساختاری غیر از طبقه‌بندی چند سطحه و مزایا و معایب ساختار مورد استفاده خود نسبت به طبقه‌بندی چند سطحه را توضیح دهید.
+
+As suggested in the handout, we have used UNIX FFS as the base of our file system. So, yes, we have used multi-level indexing. We have decided to store files less than $8 \times 512~B$ in the inode block. This enhances the performance of our file system and also makes it more efficient for small files. Larger files up untill $8 \times 512 + 128 \times 512~B$ are stored in the indirect block. They are slower to access. Even larger files are stored in the double indirect block. They are slowest to access. It worth mentioning that these values are ones used in UNIX FFS.
 
 زیرمسیرها
 ============
