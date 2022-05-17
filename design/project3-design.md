@@ -283,6 +283,12 @@ struct dir {
 
 در این پیاده سازی تنها نیاز به اضافه کردن دایرکتوری برای هر رشته (`cur_dir`) و لاک برای هر دایرکتوری (`dir_lock`) داریم.  این پیاده سازی ساده و بهینه است و پیچیدگی اضافی ندارد و میتوان به آسانی در درخت دایرکتوری حرکت کرد.
 
+سوال های افزون بر طراحی
+============
+Upon the startup of the kernel, a thread is created which has two purposes: handling the dirty data which is indicated in the cache by a single bit (1 represents corruption) and also, every time a piece of data is to be removed from the cache, it must be stored on the disk and indicated as ‘dirty’, so that the same thread can restore it upon the start of the kernel.
+To implement the read-ahead functionality in the kernel, two tasks must be done: 1. the operating system holds a list of essential files and preloads them into the cache upon the startup of the system; this results in a quikcer boot.
+2. the kernel takes advantage of the writing on the disk being sequential: when an application requests access to block A, a few other blocks are also fetched into the cache since that app will most likely want to access those blocks as well.
+
 ### سوالات نظرسنجی
 
 پاسخ به این سوالات دلخواه است، اما به ما برای بهبود این درس در ادامه کمک خواهد کرد.
