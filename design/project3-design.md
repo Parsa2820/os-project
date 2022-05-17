@@ -286,7 +286,8 @@ struct dir {
 سوال های افزون بر طراحی
 ============
 Upon the startup of the kernel, a thread is created which has two purposes: handling the dirty data which is indicated in the cache by a single bit (1 represents corruption) and also, every time a piece of data is to be removed from the cache, it must be stored on the disk and indicated as ‘dirty’, so that the same thread can restore it upon the start of the kernel.
-To implement the read-ahead functionality in the kernel, two tasks must be done: 1. the operating system holds a list of essential files and preloads them into the cache upon the startup of the system; this results in a quikcer boot.
+To implement the read-ahead functionality in the kernel, two tasks must be done: 
+1. the operating system holds a list of essential files and preloads them into the cache upon the startup of the system; this results in a quikcer boot.
 2. the kernel takes advantage of the writing on the disk being sequential: when an application requests access to block A, a few other blocks are also fetched into the cache since that app will most likely want to access those blocks as well.
 
 ### سوالات نظرسنجی
