@@ -5,6 +5,13 @@
 #include "filesys/off_t.h"
 #include "devices/block.h"
 
+/* Number of direct blocks. */
+#define DIRECT_BLOCKS 8
+/* Number of indirect blocks. */
+#define INDIRECT_BLOCKS 128
+/* Number of double indirect blocks. */
+#define DOUBLE_INDIRECT_BLOCKS 128 * 128
+
 struct bitmap;
 
 typedef enum
@@ -12,6 +19,33 @@ typedef enum
   INODE_TYPE_FILE,
   INODE_TYPE_DIRECTORY
 } inode_type_t;
+
+/* On-disk inode.
+Must be exactly BLOCK_SECTOR_SIZE bytes long. */
+struct inode_disk
+{
+  off_t length;                       /* File size in bytes. */
+  unsigned magic;                     /* Magic number. */
+  inode_type_t type;                  /* Type of the inode */
+  block_sector_t data[DIRECT_BLOCKS]; /* Direct blocks */
+  block_sector_t indirect;            /* Indirect block */
+  block_sector_t double_indirect;     /* Double indirect block */
+  uint32_t unused[115];               /* Not used. */
+};
+
+/* In-memory inode. */
+struct inode
+{
+  struct list_elem elem;  /* Element in inode list. */
+  block_sector_t sector;  /* Sector number of disk location. */
+  int open_cnt;           /* Number of openers. */
+  bool removed;           /* True if deleted, false otherwise. */
+  int deny_write_cnt;     /* 0: writes ok, >0: deny writes. */
+  struct inode_disk data; /* Inode content. */
+  int readers;            /* Number of readers. */
+  struct lock write_lock; /* Lock for write operations. */
+  struct condition cond;  /* Conditional variable for waiting writers. */
+};
 
 void inode_init(void);
 bool inode_create(block_sector_t, off_t, inode_type_t);
