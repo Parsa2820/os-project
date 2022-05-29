@@ -378,14 +378,7 @@ syscall_handler(struct intr_frame *f UNUSED)
   {
     if (syscall_number == syscall_table[i].number)
     {
-      if (syscall_table[i].is_file_op)
-        lock_acquire(&filesys_lock);
-
       syscall_table[i].syscall_func(f, args);
-
-      if (syscall_table[i].is_file_op)
-        lock_release(&filesys_lock);
-
       return;
     }
   }
