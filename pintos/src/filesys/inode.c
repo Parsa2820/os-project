@@ -6,18 +6,24 @@
 #include "filesys/filesys.h"
 #include "filesys/free-map.h"
 #include "threads/malloc.h"
+#include "threads/synch.h"
 
 /* Identifies an inode. */
 #define INODE_MAGIC 0x494e4f44
+/* Number of direct blocks. */
+#define DIRECT_BLOCKS 8
 
 /* On-disk inode.
-   Must be exactly BLOCK_SECTOR_SIZE bytes long. */
+Must be exactly BLOCK_SECTOR_SIZE bytes long. */
 struct inode_disk
 {
-  block_sector_t start; /* First data sector. */
-  off_t length;         /* File size in bytes. */
-  unsigned magic;       /* Magic number. */
-  uint32_t unused[125]; /* Not used. */
+  off_t length;                       /* File size in bytes. */
+  unsigned magic;                     /* Magic number. */
+  inode_type_t type;                  /* Type of the inode */
+  block_sector_t data[DIRECT_BLOCKS]; /* Direct blocks */
+  block_sector_t indirect;            /* Indirect block */
+  block_sector_t double_indirect;     /* Double indirect block */
+  uint32_t unused[115];               /* Not used. */
 };
 
 /* Returns the number of sectors to allocate for an inode SIZE
@@ -37,6 +43,9 @@ struct inode
   bool removed;           /* True if deleted, false otherwise. */
   int deny_write_cnt;     /* 0: writes ok, >0: deny writes. */
   struct inode_disk data; /* Inode content. */
+  int readers;            /* Number of readers. */
+  struct lock write_lock; /* Lock for write operations. */
+  struct condition cond;  /* Conditional variable for waiting writers. */
 };
 
 /* Returns the block device sector that contains byte offset POS
@@ -48,7 +57,7 @@ byte_to_sector(const struct inode *inode, off_t pos)
 {
   ASSERT(inode != NULL);
   if (pos < inode->data.length)
-    return inode->data.start + pos / BLOCK_SECTOR_SIZE;
+    return inode->data.data + pos / BLOCK_SECTOR_SIZE;
   else
     return -1;
 }
@@ -68,7 +77,7 @@ void inode_init(void)
    device.
    Returns true if successful.
    Returns false if memory or disk allocation fails. */
-bool inode_create(block_sector_t sector, off_t length)
+bool inode_create(block_sector_t sector, off_t length, inode_type_t type)
 {
   struct inode_disk *disk_inode = NULL;
   bool success = false;
@@ -85,7 +94,8 @@ bool inode_create(block_sector_t sector, off_t length)
     size_t sectors = bytes_to_sectors(length);
     disk_inode->length = length;
     disk_inode->magic = INODE_MAGIC;
-    if (free_map_allocate(sectors, &disk_inode->start))
+    disk_inode->type = type;
+    if (free_map_allocate(sectors, &disk_inode->data))
     {
       block_write(fs_device, sector, disk_inode);
       if (sectors > 0)
@@ -94,7 +104,7 @@ bool inode_create(block_sector_t sector, off_t length)
         size_t i;
 
         for (i = 0; i < sectors; i++)
-          block_write(fs_device, disk_inode->start + i, zeros);
+          block_write(fs_device, disk_inode->data + i, zeros);
       }
       success = true;
     }
@@ -174,7 +184,7 @@ void inode_close(struct inode *inode)
     if (inode->removed)
     {
       free_map_release(inode->sector, 1);
-      free_map_release(inode->data.start,
+      free_map_release(inode->data.data,
                        bytes_to_sectors(inode->data.length));
     }
 

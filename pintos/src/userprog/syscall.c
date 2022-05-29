@@ -14,6 +14,7 @@
 #include "devices/shutdown.h"
 #include "userprog/process.h"
 #include "threads/vaddr.h"
+#include "filesys/inode.h"
 
 #ifdef USERPROG
 #include "userprog/pagedir.h"
@@ -133,7 +134,7 @@ static void syscall_create(struct intr_frame *f, uint32_t *args)
     exit_error();
   }
 
-  f->eax = filesys_create(file, initial_size);
+  f->eax = filesys_create(file, initial_size, INODE_TYPE_FILE);
 }
 
 static void syscall_remove(struct intr_frame *f, uint32_t *args)
