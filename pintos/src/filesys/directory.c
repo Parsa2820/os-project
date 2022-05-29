@@ -5,12 +5,14 @@
 #include "filesys/filesys.h"
 #include "filesys/inode.h"
 #include "threads/malloc.h"
+#include "threads/thread.h"
 
 /* A directory. */
 struct dir
 {
-  struct inode *inode; /* Backing store. */
-  off_t pos;           /* Current position. */
+  struct inode *inode;  /* Backing store. */
+  off_t pos;            /* Current position. */
+  struct lock dir_lock; /* lock on directory */
 };
 
 /* A single directory entry. */
@@ -25,7 +27,23 @@ struct dir_entry
    given SECTOR.  Returns true if successful, false on failure. */
 bool dir_create(block_sector_t sector, size_t entry_cnt)
 {
-  return inode_create(sector, entry_cnt * sizeof(struct dir_entry), INODE_TYPE_DIRECTORY);
+  bool operation_result;
+  if (!(operation_result = inode_create(sector, entry_cnt * sizeof(struct dir_entry), true)))
+  {
+    return operation_result;
+  }
+  struct dir_entry *entry;
+  struct dir *directory = dir_open(inode_open(sector));
+  entry->inode_sector = sector;
+  entry->in_use = false;
+  
+  //offset in a file is a 32 bit unsingned int
+  int32_t written = inode_write_at(dir_get_inode(directory), entry, sizeof(struct dir_entry), 0);
+  if (written != sizeof(struct dir_entry)){
+    operation_result = false;
+  }
+  dir_close(directory);
+  return operation_result;
 }
 
 /* Opens and returns the directory for the given INODE, of which
@@ -120,9 +138,18 @@ bool dir_lookup(const struct dir *dir, const char *name,
 
   ASSERT(dir != NULL);
   ASSERT(name != NULL);
-
+  
   if (lookup(dir, name, &e, NULL))
     *inode = inode_open(e.inode_sector);
+  else if (strcmp(name, ".") == 0)
+  {
+    *inode = inode_reopen(dir->inode);
+  }
+  else if (strcmp(name, "..") == 0)
+  {
+    inode_read_at(dir->inode, &e, sizeof e, 0);
+    *inode = inode_open(e.inode_sector);
+  }
   else
     *inode = NULL;
 
@@ -210,6 +237,22 @@ done:
   return success;
 }
 
+struct dir* 
+dir_open_dir(const char *dir)
+{
+  struct dir *cur_dir;
+  struct thread *cur_thread = thread_current();
+  if(cur_thread->current_dir == NULL || dir[0] == '/')
+  {
+    cur_dir = dir_open_root();
+  }
+  else
+  {
+    cur_dir = dir_reopen(cur_thread->current_dir);
+  }
+   
+}
+
 /* Reads the next directory entry in DIR and stores the name in
    NAME.  Returns true if successful, false if the directory
    contains no more entries. */
@@ -228,3 +271,4 @@ bool dir_readdir(struct dir *dir, char name[NAME_MAX + 1])
   }
   return false;
 }
+

@@ -15,6 +15,7 @@
 #include "userprog/process.h"
 #include "threads/vaddr.h"
 #include "filesys/inode.h"
+#include "filesys/directory.h"
 
 #ifdef USERPROG
 #include "userprog/pagedir.h"
@@ -32,6 +33,11 @@ static void syscall_read(struct intr_frame *, uint32_t *);
 static void syscall_seek(struct intr_frame *, uint32_t *);
 static void syscall_tell(struct intr_frame *, uint32_t *);
 static void syscall_close(struct intr_frame *, uint32_t *);
+static void syscall_mkdir(struct intr_frame *, uint32_t *);
+static void syscall_chdir(struct intr_frame *, uint32_t *);
+static void syscall_readdir(struct intr_frame *, uint32_t *);
+static void syscall_isdir(struct intr_frame *, uint32_t *);
+static void syscall_inumber(struct intr_frame *, uint32_t *);
 #endif
 static void syscall_halt(struct intr_frame *, uint32_t *);
 static void syscall_wait(struct intr_frame *, uint32_t *);
@@ -277,6 +283,101 @@ static void syscall_close(struct intr_frame *f, uint32_t *args)
   f->eax = 0;
 }
 
+static void syscall_chdir(struct intr_frame *f, uint32_t *args)
+{
+  if (!is_valid_ptr((const char *)args[1]))
+  {
+    f->eax = -1;
+    exit_error();
+  }
+  char *name = (char *)args[1];
+  struct dir *dir = dir_open_dir(name); //TODO
+  if (dir == NULL)
+  {
+    f->eax = -1;
+    exit_error();
+  }
+
+  dir_close(thread_current()->current_dir);
+  thread_current()->current_dir = dir;
+  f->eax = 0;
+}
+
+static void syscall_mkdir(struct intr_frame *f, uint32_t *args)
+{
+  if (!is_valid_ptr((const char *)args[1]))
+  {
+    f->eax = -1;
+    exit_error();
+  }
+  char *name = (char *)args[0];
+  f->eax = filesys_create(name, 0, INODE_TYPE_DIRECTORY);
+}
+
+static void syscall_readdir(struct intr_frame *f, uint32_t *args)
+{
+  if (!is_valid_ptr((const char *)args[1]) || !is_valid_ptr((const char *)args[1] + strlen((const char *)args[1]) - 1))
+  {
+    f->eax = -1;
+    exit_error();
+  }
+  int fd = args[1];
+  char *name = (char *)args[2];
+  struct file *file = find_file_descriptor(fd);
+  if (file == NULL)
+  {
+    f->eax = -1;
+    exit_error();
+  }
+
+  struct inode *inode = file_get_inode(file);
+  if (inode == NULL || inode->data.type != INODE_TYPE_DIRECTORY)
+  {
+    f->eax = -1;
+    exit_error();
+  }
+
+  struct dir *dir = dir_open(inode);
+  f->eax = dir_readdir(dir, name);
+}
+
+static void syscall_isdir(struct intr_frame *f, uint32_t *args)
+{
+  if (!is_valid_ptr((const char *)args[1]))
+  {
+    f->eax = -1;
+    exit_error();
+  }
+
+  int fd = args[1];
+  struct file *file = find_file_descriptor(fd);
+  if (file == NULL)
+  {
+    f->eax = -1;
+    exit_error();
+  }
+  struct inode *inode = file_get_inode(file);
+  f->eax = (inode->data.type == INODE_TYPE_DIRECTORY) ? 1 : 0;
+}
+
+static void syscall_inumber(struct intr_frame *f, uint32_t *args)
+{
+  if (!is_valid_ptr((const char *)args[1]))
+  {
+    f->eax = -1;
+    exit_error();
+  }
+
+  int fd = args[1];
+  struct file *file = find_file_descriptor(fd);
+  if (file == NULL)
+  {
+    f->eax = -1;
+    exit_error();
+  }
+  f->eax = inode_get_inumber(file_get_inode(file));
+}
+
 #endif
 
 static void syscall_exit(struct intr_frame *f, uint32_t *args)
@@ -310,19 +411,22 @@ static void syscall_exec(struct intr_frame *f, uint32_t *args)
 
   if (is_valid_ptr(file))
   {
-    void* ph_adr = pagedir_get_page(thread_current()->pagedir, file);
-    if (is_valid_ptr(file + strlen(ph_adr))){
-        f->eax = process_execute(file);
-    }else{
+    void *ph_adr = pagedir_get_page(thread_current()->pagedir, file);
+    if (is_valid_ptr(file + strlen(ph_adr)))
+    {
+      f->eax = process_execute(file);
+    }
+    else
+    {
       f->eax = -1;
       exit_error();
     }
-  }else {
+  }
+  else
+  {
     f->eax = -1;
     exit_error();
   }
-
-  
 }
 
 syscall_descriptor_t syscall_table[] = {
@@ -336,6 +440,11 @@ syscall_descriptor_t syscall_table[] = {
     {SYS_SEEK, &syscall_seek, 1},
     {SYS_TELL, &syscall_tell, 1},
     {SYS_CLOSE, &syscall_close, 1},
+    {SYS_MKDIR, &syscall_mkdir, 1},
+    {SYS_CHDIR, &syscall_chdir, 1},
+    {SYS_READDIR, &syscall_readdir, 1},
+    {SYS_ISDIR, &syscall_isdir, 1},
+    {SYS_INUMBER, &syscall_inumber, 1},
 #endif
     {SYS_EXIT, &syscall_exit, 0},
     {SYS_PRACTICE, &syscall_practice, 0},

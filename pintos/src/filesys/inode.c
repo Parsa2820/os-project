@@ -258,6 +258,7 @@ void inode_remove(struct inode *inode)
    than SIZE if an error occurs or end of file is reached. */
 off_t inode_read_at(struct inode *inode, void *buffer_, off_t size, off_t offset)
 {
+  lock_acquire(&inode->operation_lock);
   uint8_t *buffer = buffer_;
   off_t bytes_read = 0;
   uint8_t *bounce = NULL;
@@ -304,6 +305,7 @@ off_t inode_read_at(struct inode *inode, void *buffer_, off_t size, off_t offset
   }
   free(bounce);
 
+  lock_release(&inode->operation_lock);
   return bytes_read;
 }
 
@@ -312,9 +314,9 @@ off_t inode_read_at(struct inode *inode, void *buffer_, off_t size, off_t offset
    less than SIZE if end of file is reached or an error occurs.
    (Normally a write at end of file would extend the inode, but
    growth is not yet implemented.) */
-off_t inode_write_at(struct inode *inode, const void *buffer_, off_t size,
-                     off_t offset)
+off_t inode_write_at(struct inode *inode, const void *buffer_, off_t size, off_t offset)
 {
+  lock_acquire(&inode->operation_lock);
   const uint8_t *buffer = buffer_;
   off_t bytes_written = 0;
   uint8_t *bounce = NULL;
@@ -371,6 +373,7 @@ off_t inode_write_at(struct inode *inode, const void *buffer_, off_t size,
   }
   free(bounce);
 
+  lock_release(&inode->operation_lock);
   return bytes_written;
 }
 
