@@ -6,10 +6,14 @@
 #include "filesys/filesys.h"
 #include "filesys/free-map.h"
 #include "threads/malloc.h"
-#include "threads/synch.h"
 
 /* Identifies an inode. */
 #define INODE_MAGIC 0x494e4f44
+
+typedef struct
+{
+  block_sector_t sectors[INDIRECT_BLOCKS];
+} indirect_block_t;
 
 /* Returns the number of sectors to allocate for an inode SIZE
    bytes long. */
@@ -43,25 +47,91 @@ void inode_init(void)
   list_init(&open_inodes);
 }
 
+/* Allocate sector and clear it.
+   Return true if successful, false on failure. */
+static bool sector_free_map_clear_allocate(block_sector_t *sector)
+{
+  static char zeros[BLOCK_SECTOR_SIZE];
+
+  if (!free_map_allocate(1, sector))
+    return false;
+  
+  block_write(fs_device, *sector, zeros);
+  return true;
+}
+
+/* Allocate sector for direct block and clear it.
+   Return true if successful, false on failure. */
+static bool direct_free_map_clear_allocate(struct inode_disk *disk_inode, block_sector_t *sectors)
+{
+  for (size_t i = 0; *sectors > 0 && i < DIRECT_BLOCKS; i++, *sectors--)
+    if (!sector_free_map_clear_allocate(&disk_inode->data[i]))
+      return false;
+  return true;
+}
+
+/* Allocate sector for indirect block and clear it.
+   Return true if successful, false on failure. */
+static bool indirect_free_map_clear_allocate(struct inode_disk *disk_inode, block_sector_t *sectors)
+{
+  if (!free_map_allocate(1, &disk_inode->indirect))
+    return false;
+
+  indirect_block_t *indirect_block = calloc(sizeof(indirect_block_t), 1);
+
+  for (size_t i = 0; *sectors > 0 && i < INDIRECT_BLOCKS; i++, *sectors--)
+    if (!free_map_allocate(1, &indirect_block->sectors[i]))
+      return false;
+
+  block_write(fs_device, &disk_inode->indirect, indirect_block);
+  free(indirect_block);
+  return true;
+}
+
+/* Allocate sector for double indirect block and clear it.
+   Return true if successful, false on failure. */
+static bool double_indirect_free_map_clear_allocate(struct inode_disk *disk_inode, block_sector_t *sectors)
+{
+  if (!free_map_allocate(1, &disk_inode->double_indirect))
+    return false;
+
+  indirect_block_t *double_indirect_block = calloc(sizeof(indirect_block_t), 1);
+
+  for (size_t i = 0; i < DOUBLE_INDIRECT_BLOCKS/INDIRECT_BLOCKS; i++)
+    if (!indirect_free_map_clear_allocate(double_indirect_block->sectors[i], sectors))
+      return false;
+
+  block_write(fs_device, &disk_inode->double_indirect, double_indirect_block);
+  free(double_indirect_block);
+  return true;
+}
+
+typedef bool (*free_map_clear_allocate_func)(struct inode_disk *disk_inode, block_sector_t *sectors);
+
 /* Allocate sectors for the inode
    from the free map and store them in the inode.
    Returns true if successful, false if not enough
    space in the free map. */
-bool inode_free_map_allocate(struct inode_disk *disk_inode, size_t sectors)
+static bool inode_free_map_clear_allocate(struct inode_disk *disk_inode, size_t sectors)
 {
-  free_map_allocate(sectors, &disk_inode->data[0]);
-}
+  ASSERT(disk_inode != NULL);
+  ASSERT(sectors > 0);
 
-/* Fill the inode data with zeros. */
-void inode_zero(struct inode_disk *disk_inode, size_t sectors)
-{
-  if (sectors > 0)
+  static free_map_clear_allocate_func free_map_clear_allocate_funcs[] = {
+    direct_free_map_clear_allocate,
+    indirect_free_map_clear_allocate,
+    double_indirect_free_map_clear_allocate
+  };
+
+  for (size_t i = 0; i < sizeof(free_map_clear_allocate_funcs)/sizeof(free_map_clear_allocate_func); i++)
   {
-    static char zeros[BLOCK_SECTOR_SIZE];
-    
-    for (size_t i = 0; i < sectors; i++)
-      block_write(fs_device, disk_inode->data[0] + i, zeros);
+    if (!free_map_clear_allocate_funcs[i](disk_inode, &sectors))
+      return false;
+    if (sectors == 0)
+      return true;
   }
+
+  return false;
 }
 
 /* Initializes an inode with LENGTH bytes of data and
@@ -87,10 +157,9 @@ bool inode_create(block_sector_t sector, off_t length, inode_type_t type)
     disk_inode->length = length;
     disk_inode->magic = INODE_MAGIC;
     disk_inode->type = type;
-    if (inode_free_map_allocate(disk_inode, sectors))
+    if (inode_free_map_clear_allocate(disk_inode, sectors))
     {
       block_write(fs_device, sector, disk_inode);
-      inode_zero(disk_inode, sectors);
       success = true;
     }
     free(disk_inode);
