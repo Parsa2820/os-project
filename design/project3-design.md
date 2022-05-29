@@ -241,20 +241,54 @@ As suggested in the handout, we have used UNIX FFS as the base of our file syste
 
 >> در این قسمت تعریف هر یک از `struct` ها، اعضای `struct` ها، متغیرهای سراسری یا ایستا، `typedef` ها یا `enum` هایی که ایجاد کرده‌اید یا تغییر داده‌اید را بنویسید و دلیل هر کدام را در حداکثر ۲۵ کلمه توضیح دهید.
 
+thead.h
+```c
+struct thread {
+    ...
+    struct dir *cur_dir; // thread current directory
+};
+```
+
+directory.c
+```c
+struct dir {
+  ...
+  struct lock dir_lock; //lock on directory
+};
+```
+
 الگوریتم‌ها
 -----------
 
 >> کد خود را برای طی کردن یک مسیر گرفته‌شده از کاربر را توضیح دهید. آیا عبور از مسیرهای absolute و relative تفاوتی دارد؟
+
+با کانکت کردن مسیر relative و متغیر `cur_dir` مسیر absolute را بدست می آوریم.  
+
+
+برای عبور از مسیر absolute از `ROOT_DIR_SECTOR` (Root directory file inode sector) استفاده میکنیم و با تابع `dir_lookup` DIR یک فایل را با اسم آن جست و جو میکنیم.
 
 همگام سازی
 -------------
 
 >> چگونه از رخ دادن race-condition در مورد دایرکتوری ها پیشگیری می‌کنید؟ برای مثال اگر دو درخواست موازی برای حذف یک فایل وجود داشته باشد و  تنها یکی از آنها باید موفق شود یا مثلاً دو ریسه موازی بخواهند فایلی یک اسم در یک مسیر ایجاد کنند و مانند آن. آیا پیاده سازی شما اجازه می‌دهد مسیری که CWD یک ریسه شده یا پردازه‌ای از آن استفاده می‌کند حذف شود؟ اگر بله، عملیات فایل سیستم بعدی روی آن دایرکتوری چه نتیجه‌ای می‌دهند؟ اگر نه، چطور جلوی آن را می‌گیرید؟
 
+
+یک قفل مجزا با هر ساختار dir مرتبط میکنیم (`dir_lock`).
+ هر زمان که عملیات thread_safe با dir انجام شود از این قفل استفاده میشود. از آنجایی که هر dir با سطح متفاوتی در درخت دایرکتوری مرتبط است،  در عملیات‌هایی که همان dir را تغییر می‌دهند، از حذف متقابل اطمینان حاصل میکنیم.
+
 منطق طراحی
 -----------------
 
->> توضیح دهید چرا تصمیم گرفتید CWD یک پردازه را به شکلی که طراحی کرده‌اید پیاده‌سازی کنید؟
+>> توضیح دهید چرا تصمیم گرفتید CWD یک پردازه را به شکلی که طراحی کرده‌اید پیاده‌سازی کنید
+
+در این پیاده سازی تنها نیاز به اضافه کردن دایرکتوری برای هر رشته (`cur_dir`) و لاک برای هر دایرکتوری (`dir_lock`) داریم.  این پیاده سازی ساده و بهینه است و پیچیدگی اضافی ندارد و میتوان به آسانی در درخت دایرکتوری حرکت کرد.
+
+سوال های افزون بر طراحی
+============
+Upon the startup of the kernel, a thread is created which has two purposes: handling the dirty data which is indicated in the cache by a single bit (1 represents corruption) and also, every time a piece of data is to be removed from the cache, it must be stored on the disk and indicated as ‘dirty’, so that the same thread can restore it upon the start of the kernel.
+To implement the read-ahead functionality in the kernel, two tasks must be done: 
+1. the operating system holds a list of essential files and preloads them into the cache upon the startup of the system; this results in a quikcer boot.
+2. the kernel takes advantage of the writing on the disk being sequential: when an application requests access to block A, a few other blocks are also fetched into the cache since that app will most likely want to access those blocks as well.
 
 ### سوالات نظرسنجی
 
