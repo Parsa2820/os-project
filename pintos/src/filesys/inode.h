@@ -37,15 +37,15 @@ struct inode_disk
 /* In-memory inode. */
 struct inode
 {
-  struct list_elem elem;  /* Element in inode list. */
-  block_sector_t sector;  /* Sector number of disk location. */
-  int open_cnt;           /* Number of openers. */
-  bool removed;           /* True if deleted, false otherwise. */
-  int deny_write_cnt;     /* 0: writes ok, >0: deny writes. */
-  struct inode_disk data; /* Inode content. */
-  int readers;            /* Number of readers. */
-  struct lock write_lock; /* Lock for write operations. */
-  struct condition cond;  /* Conditional variable for waiting writers. */
+  struct list_elem elem;      /* Element in inode list. */
+  block_sector_t sector;      /* Sector number of disk location. */
+  int open_cnt;               /* Number of openers. */
+  bool removed;               /* True if deleted, false otherwise. */
+  int deny_write_cnt;         /* 0: writes ok, >0: deny writes. */
+  struct inode_disk data;     /* Inode content. */
+  // int readers;             /* Number of readers. */
+  struct lock operation_lock; /* Lock for operations. */
+  // struct condition cond;   /* Conditional variable for waiting writers. */
 };
 
 void inode_init(void);

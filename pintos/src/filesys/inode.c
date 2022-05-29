@@ -55,7 +55,7 @@ static bool sector_free_map_clear_allocate(block_sector_t *sector)
 
   if (!free_map_allocate(1, sector))
     return false;
-  
+
   block_write(fs_device, *sector, zeros);
   return true;
 }
@@ -97,7 +97,7 @@ static bool double_indirect_free_map_clear_allocate(struct inode_disk *disk_inod
 
   indirect_block_t *double_indirect_block = calloc(sizeof(indirect_block_t), 1);
 
-  for (size_t i = 0; i < DOUBLE_INDIRECT_BLOCKS/INDIRECT_BLOCKS; i++)
+  for (size_t i = 0; i < DOUBLE_INDIRECT_BLOCKS / INDIRECT_BLOCKS; i++)
     if (!indirect_free_map_clear_allocate(double_indirect_block->sectors[i], sectors))
       return false;
 
@@ -118,12 +118,11 @@ static bool inode_free_map_clear_allocate(struct inode_disk *disk_inode, size_t 
   ASSERT(sectors > 0);
 
   static free_map_clear_allocate_func free_map_clear_allocate_funcs[] = {
-    direct_free_map_clear_allocate,
-    indirect_free_map_clear_allocate,
-    double_indirect_free_map_clear_allocate
-  };
+      direct_free_map_clear_allocate,
+      indirect_free_map_clear_allocate,
+      double_indirect_free_map_clear_allocate};
 
-  for (size_t i = 0; i < sizeof(free_map_clear_allocate_funcs)/sizeof(free_map_clear_allocate_func); i++)
+  for (size_t i = 0; i < sizeof(free_map_clear_allocate_funcs) / sizeof(free_map_clear_allocate_func); i++)
   {
     if (!free_map_clear_allocate_funcs[i](disk_inode, &sectors))
       return false;
