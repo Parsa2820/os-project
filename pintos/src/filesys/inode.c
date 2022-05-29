@@ -12,6 +12,10 @@
 #define INODE_MAGIC 0x494e4f44
 /* Number of direct blocks. */
 #define DIRECT_BLOCKS 8
+/* Number of indirect blocks. */
+#define INDIRECT_BLOCKS 128
+/* Number of double indirect blocks. */
+#define DOUBLE_INDIRECT_BLOCKS 128*128
 
 /* On-disk inode.
 Must be exactly BLOCK_SECTOR_SIZE bytes long. */
@@ -57,7 +61,7 @@ byte_to_sector(const struct inode *inode, off_t pos)
 {
   ASSERT(inode != NULL);
   if (pos < inode->data.length)
-    return inode->data.data + pos / BLOCK_SECTOR_SIZE;
+    return inode->data.data[0] + pos / BLOCK_SECTOR_SIZE;
   else
     return -1;
 }
@@ -95,7 +99,7 @@ bool inode_create(block_sector_t sector, off_t length, inode_type_t type)
     disk_inode->length = length;
     disk_inode->magic = INODE_MAGIC;
     disk_inode->type = type;
-    if (free_map_allocate(sectors, &disk_inode->data))
+    if (free_map_allocate(sectors, &disk_inode->data[0]))
     {
       block_write(fs_device, sector, disk_inode);
       if (sectors > 0)
@@ -104,7 +108,7 @@ bool inode_create(block_sector_t sector, off_t length, inode_type_t type)
         size_t i;
 
         for (i = 0; i < sectors; i++)
-          block_write(fs_device, disk_inode->data + i, zeros);
+          block_write(fs_device, disk_inode->data[0] + i, zeros);
       }
       success = true;
     }
@@ -184,7 +188,7 @@ void inode_close(struct inode *inode)
     if (inode->removed)
     {
       free_map_release(inode->sector, 1);
-      free_map_release(inode->data.data,
+      free_map_release(inode->data.data[0],
                        bytes_to_sectors(inode->data.length));
     }
 
