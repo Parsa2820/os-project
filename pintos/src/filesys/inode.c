@@ -591,6 +591,8 @@ off_t inode_read_at(struct inode *inode, void *buffer_, off_t size, off_t offset
 /* Extend the file size to SIZE bytes. */
 static bool inode_extend(struct inode *inode, off_t size)
 {
+  inode_free_map_deallocate(inode);
+  
   if (!inode_free_map_clear_allocate(&inode->data, size))
     return false;
 
