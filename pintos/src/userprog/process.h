@@ -3,6 +3,12 @@
 
 #include "threads/thread.h"
 
+struct arguements
+  {
+    char *filename;
+    struct dir *parent_current_dir;
+  };
+
 tid_t process_execute(const char *file_name);
 int process_wait(tid_t);
 void process_exit(void);

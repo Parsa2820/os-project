@@ -313,7 +313,7 @@ static void syscall_chdir(struct intr_frame *f, uint32_t *args)
 
 static void syscall_mkdir(struct intr_frame *f, uint32_t *args)
 {
-  if (!is_valid_ptr((const char *)args[1]))
+  if (!is_valid_ptr((const char *)args[0]))
   {
     f->eax = -1;
     exit_error();

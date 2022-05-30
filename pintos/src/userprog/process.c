@@ -67,9 +67,14 @@ tid_t process_execute(const char *file_name)
   thread_wait_info_t *wait_info = malloc(sizeof(thread_wait_info_t));
   wait_info->exit_status = 0;
   sema_init(&(wait_info->wait), 0);
+
+  //handle parent working directory
+  struct arguements arguements;
+  arguements.filename = fn_copy;
+  arguements.parent_current_dir = thread_current ()->current_dir;
   
   /* Create a new thread to execute FILE_NAME. */
-  t = thread_create_aux(file_name_only, PRI_DEFAULT, start_process, fn_copy);
+  t = thread_create_aux(file_name_only, PRI_DEFAULT, start_process, (void *)&arguements);
   if (t->tid == TID_ERROR)
     palloc_free_page(fn_copy);
 
@@ -178,9 +183,9 @@ void invalid_file()
 /* A thread function that loads a user process and starts it
    running. */
 static void
-start_process(void *file_name_)
+start_process(void *arguements)
 {
-  char *file_name = file_name_;
+  char *file_name = ((struct arguements *)arguements)->filename;
   struct intr_frame if_;
   bool success;
 
@@ -196,6 +201,11 @@ start_process(void *file_name_)
   palloc_free_page(file_name);
   if (!success)
     invalid_file();
+
+  if (((struct arguements *)arguements)->parent_current_dir)
+    thread_current ()->current_dir = dir_reopen (((struct arguements *)arguements)->parent_current_dir);
+  else
+    thread_current ()->current_dir = dir_open_root ();
 
   struct thread *cur = thread_current();
   sema_up(&(cur->wait_info->wait));
@@ -245,6 +255,9 @@ void process_exit(void)
 {
   struct thread *cur = thread_current();
   uint32_t *pd;
+
+  if (cur->current_dir != NULL)
+    dir_close (cur->current_dir);
 
   /* Destroy the current process's page directory and switch back
      to the kernel-only page directory. */

@@ -183,7 +183,7 @@ bool dir_add(struct dir *dir, const char *name, block_sector_t inode_sector, ino
   if (lookup(dir, name, NULL, NULL))
     goto done;
 
-  /*if (is_dir)
+  if (type == INODE_TYPE_DIRECTORY)
     {
       bool parent_success = true;
       struct dir_entry e_;
@@ -205,7 +205,7 @@ bool dir_add(struct dir *dir, const char *name, block_sector_t inode_sector, ino
 
       if (!parent_success)
         goto done;
-    }*/
+    }
   /* Set OFS to offset of free slot.
      If there are no free slots, then it will be set to the
      current end-of-file.
@@ -311,6 +311,47 @@ get_next_part (char part[NAME_MAX + 1], const char **srcp)
   /* Advance source pointer. */
   *srcp = src;
   return 1;
+}
+
+
+bool
+separate_path_and_filename(const char *path, char *dir, char *file)
+{
+  if (path[0] == '\0')
+  {
+    return false;
+  }
+
+  if (path[0] == '/')
+  {
+    *dir++ = '/';
+  }
+  
+  int status;
+  char token[NAME_MAX + 1], prev_token[NAME_MAX + 1];
+  token[0] = '\0';
+  prev_token[0] = '\0';
+
+  while ((status = get_next_part (token, &path)) != 0)
+    {
+      if (status == -1)
+        return false;
+
+      int prev_length = strlen (prev_token);
+      if (prev_length > 0)
+        {
+          memcpy (dir, prev_token, sizeof (char) * prev_length);
+          dir[prev_length] = '/';
+          dir += prev_length + 1;
+        }
+      memcpy (prev_token, token, sizeof (char) * strlen (token));
+      prev_token[strlen (token)] = '\0';
+    }
+
+  *dir = '\0';
+  memcpy (file, token, sizeof (char) * (strlen (token) + 1));
+
+  return true;
 }
 
 struct dir *
