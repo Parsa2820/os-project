@@ -33,12 +33,12 @@ static void syscall_read(struct intr_frame *, uint32_t *);
 static void syscall_seek(struct intr_frame *, uint32_t *);
 static void syscall_tell(struct intr_frame *, uint32_t *);
 static void syscall_close(struct intr_frame *, uint32_t *);
+#endif
 static void syscall_mkdir(struct intr_frame *, uint32_t *);
 static void syscall_chdir(struct intr_frame *, uint32_t *);
 static void syscall_readdir(struct intr_frame *, uint32_t *);
 static void syscall_isdir(struct intr_frame *, uint32_t *);
 static void syscall_inumber(struct intr_frame *, uint32_t *);
-#endif
 static void syscall_halt(struct intr_frame *, uint32_t *);
 static void syscall_wait(struct intr_frame *, uint32_t *);
 static void syscall_exec(struct intr_frame *, uint32_t *);
@@ -290,6 +290,26 @@ static void syscall_close(struct intr_frame *f, uint32_t *args)
   free(file_descriptor);
   f->eax = 0;
 }
+#endif
+
+
+static void syscall_inumber(struct intr_frame *f, uint32_t *args)
+{
+  if (!is_valid_ptr((const char *)args[1]))
+  {
+    f->eax = -1;
+    exit_error();
+  }
+
+  int fd = args[1];
+  struct file *file = find_file_descriptor(fd);
+  if (file == NULL)
+  {
+    f->eax = -1;
+    exit_error();
+  }
+  f->eax = inode_get_inumber(file_get_inode(file));
+}
 
 static void syscall_chdir(struct intr_frame *f, uint32_t *args)
 {
@@ -308,17 +328,17 @@ static void syscall_chdir(struct intr_frame *f, uint32_t *args)
 
   dir_close(thread_current()->current_dir);
   thread_current()->current_dir = dir;
-  f->eax = 0;
+  f->eax = 1;
 }
 
 static void syscall_mkdir(struct intr_frame *f, uint32_t *args)
 {
-  if (!is_valid_ptr((const char *)args[0]))
+  if (!is_valid_ptr((const char *)args[1]))
   {
     f->eax = -1;
     exit_error();
   }
-  char *name = (char *)args[0];
+  char *name = (char *)args[1];
   f->eax = filesys_create(name, 0, INODE_TYPE_DIRECTORY);
 }
 
@@ -367,26 +387,6 @@ static void syscall_isdir(struct intr_frame *f, uint32_t *args)
   struct inode *inode = file_get_inode(file);
   f->eax = (inode->data.type == INODE_TYPE_DIRECTORY) ? 1 : 0;
 }
-
-static void syscall_inumber(struct intr_frame *f, uint32_t *args)
-{
-  if (!is_valid_ptr((const char *)args[1]))
-  {
-    f->eax = -1;
-    exit_error();
-  }
-
-  int fd = args[1];
-  struct file *file = find_file_descriptor(fd);
-  if (file == NULL)
-  {
-    f->eax = -1;
-    exit_error();
-  }
-  f->eax = inode_get_inumber(file_get_inode(file));
-}
-
-#endif
 
 static void syscall_exit(struct intr_frame *f, uint32_t *args)
 {
@@ -478,11 +478,6 @@ syscall_descriptor_t syscall_table[] = {
     {SYS_SEEK, &syscall_seek, 1},
     {SYS_TELL, &syscall_tell, 1},
     {SYS_CLOSE, &syscall_close, 1},
-    {SYS_MKDIR, &syscall_mkdir, 1},
-    {SYS_CHDIR, &syscall_chdir, 1},
-    {SYS_READDIR, &syscall_readdir, 1},
-    {SYS_ISDIR, &syscall_isdir, 1},
-    {SYS_INUMBER, &syscall_inumber, 1},
 #endif
     {SYS_EXIT, &syscall_exit, 0},
     {SYS_PRACTICE, &syscall_practice, 0},
@@ -495,6 +490,11 @@ syscall_descriptor_t syscall_table[] = {
     {SYS_READ_CNT, &syscall_get_read_cnt, 0},
     {SYS_WRITE_CNT, &syscall_get_write_cnt, 0},
     {SYS_RESET_COUNTER, &syscall_reset_counter, 0},
+    {SYS_MKDIR, &syscall_mkdir, 0},
+    {SYS_CHDIR, &syscall_chdir, 0},
+    {SYS_READDIR, &syscall_readdir, 0},
+    {SYS_ISDIR, &syscall_isdir, 0},
+    {SYS_INUMBER, &syscall_inumber, 0},
 };
 
 static bool;

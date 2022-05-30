@@ -45,7 +45,7 @@ bool filesys_create(const char *name, off_t initial_size, inode_type_t type)
   block_sector_t inode_sector = 0;
 
   char dirname[strlen (name) + 1];
-  char filename[NAME_MAX + 1];
+  char filename[strlen (name) + 1];
   dirname[0] = '\0';
   filename[0] = '\0';
   bool path_separated = separate_path_and_filename (name, dirname, filename);
