@@ -57,6 +57,7 @@ dir_open(struct inode *inode)
   {
     dir->inode = inode;
     dir->pos = 0;
+    lock_init (&dir->dir_lock);
     return dir;
   }
   else
@@ -163,7 +164,7 @@ bool dir_lookup(const struct dir *dir, const char *name,
    Returns true if successful, false on failure.
    Fails if NAME is invalid (i.e. too long) or a disk or memory
    error occurs. */
-bool dir_add(struct dir *dir, const char *name, block_sector_t inode_sector)
+bool dir_add(struct dir *dir, const char *name, block_sector_t inode_sector, inode_type_t type)
 {
   struct dir_entry e;
   off_t ofs;
@@ -172,14 +173,39 @@ bool dir_add(struct dir *dir, const char *name, block_sector_t inode_sector)
   ASSERT(dir != NULL);
   ASSERT(name != NULL);
 
+  dir_acquire_lock(dir);
+
   /* Check NAME for validity. */
   if (*name == '\0' || strlen(name) > NAME_MAX)
-    return false;
+    goto done;
 
   /* Check that NAME is not in use. */
   if (lookup(dir, name, NULL, NULL))
     goto done;
 
+  /*if (is_dir)
+    {
+      bool parent_success = true;
+      struct dir_entry e_;
+      struct dir *curr_dir = dir_open (inode_open (inode_sector));
+      if (curr_dir == NULL)
+        goto done;
+
+      // Acquire curr_dir lock. 
+      dir_acquire_lock (curr_dir);
+
+      e_.in_use = false;
+      e_.inode_sector = inode_get_inumber (dir_get_inode (dir));
+      if (inode_write_at (curr_dir->inode, &e_, sizeof e_, 0) != sizeof e_)
+        parent_success = false;
+
+      // Release curr_dir lock. 
+      dir_release_lock (curr_dir);
+      dir_close (curr_dir);
+
+      if (!parent_success)
+        goto done;
+    }*/
   /* Set OFS to offset of free slot.
      If there are no free slots, then it will be set to the
      current end-of-file.
@@ -199,6 +225,7 @@ bool dir_add(struct dir *dir, const char *name, block_sector_t inode_sector)
   success = inode_write_at(dir->inode, &e, sizeof e, ofs) == sizeof e;
 
 done:
+  dir_release_lock(dir);
   return success;
 }
 
