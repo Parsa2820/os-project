@@ -35,6 +35,7 @@ typedef struct file_descriptor
    int fileno;
    /* list node */
    struct list_elem elem;
+   struct dir *dir;
 } file_descriptor_t;
 
 typedef struct thread_wait_info

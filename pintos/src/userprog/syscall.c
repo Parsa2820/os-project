@@ -168,6 +168,7 @@ static void syscall_open(struct intr_frame *f, uint32_t *args)
     exit_error();
   }
 
+
   struct file *opened_file = filesys_open(file);
 
   if (opened_file == NULL)
@@ -176,13 +177,20 @@ static void syscall_open(struct intr_frame *f, uint32_t *args)
     return;
   }
 
-  struct thread *current_thread = thread_current();
+  struct thread *current_thread = thread_current(); 
   int fileno = current_thread->last_fileno++;
   file_descriptor_t *file_descriptor = malloc(sizeof(file_descriptor_t));
   file_descriptor->file = opened_file;
   file_descriptor->fileno = fileno;
   list_push_back(&current_thread->file_descriptors, &file_descriptor->elem);
-  f->eax = fileno;
+
+  int fd = fileno;
+  struct inode *inode = file_get_inode(opened_file);
+  // if(inode && inode->data.type == INODE_TYPE_DIRECTORY)
+  // {
+  //   find_file_descriptor = dir_open(inode_reopen(inode)); //todo
+  // }
+  f->eax = fd;
 }
 
 static void syscall_filesize(struct intr_frame *f, uint32_t *args)
@@ -291,7 +299,7 @@ static void syscall_chdir(struct intr_frame *f, uint32_t *args)
     exit_error();
   }
   char *name = (char *)args[1];
-  struct dir *dir = dir_open_dir(name); //TODO
+  struct dir *dir = dir_open_by_path(name);
   if (dir == NULL)
   {
     f->eax = -1;
