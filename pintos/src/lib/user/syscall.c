@@ -168,9 +168,26 @@ int inumber(int fd)
   return syscall1(SYS_INUMBER, fd);
 }
 
+int get_cache_hit()
+{
+  return syscall0(SYS_CACHE_HIT);
+}
+
+int get_cache_miss()
+{
+  return syscall0(SYS_CACHE_MISS);
+}
+
+void reset_cache()
+{
+  return syscall0(SYS_RESET_CACHE);
+}
+
 void *
 sbrk(intptr_t increment)
 {
   /* Homework 5, Part B: YOUR CODE HERE */
   return NULL;
 }
+
+

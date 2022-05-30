@@ -14,6 +14,7 @@
 #include "devices/shutdown.h"
 #include "userprog/process.h"
 #include "threads/vaddr.h"
+#include "filesys/inode.h"
 
 #ifdef USERPROG
 #include "userprog/pagedir.h"
@@ -324,6 +325,18 @@ static void syscall_exec(struct intr_frame *f, uint32_t *args)
   
 }
 
+static void syscall_get_cache_hit_rate(struct intr_frame *f, uint32_t *args){
+  f->eax = cache_hit;
+}
+
+static void syscall_get_cache_miss_rate(struct intr_frame *f, uint32_t *args){
+  f->eax = cache_miss;
+}
+
+static void syscall_reset_cache(struct intr_frame *f, uint32_t *args){
+  reset_cache();
+}
+
 syscall_descriptor_t syscall_table[] = {
 #ifdef USERPROG
     {SYS_WRITE, &syscall_write, 1},
@@ -341,6 +354,9 @@ syscall_descriptor_t syscall_table[] = {
     {SYS_HALT, &syscall_halt, 0},
     {SYS_WAIT, &syscall_wait, 0},
     {SYS_EXEC, &syscall_exec, 0},
+    {SYS_CACHE_HIT, &syscall_get_cache_hit_rate, 0},
+    {SYS_CACHE_MISS, &syscall_get_cache_miss_rate, 0},
+    {SYS_RESET_CACHE, &syscall_reset_cache, 0},
 };
 
 static bool;

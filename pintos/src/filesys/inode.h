@@ -5,8 +5,14 @@
 #include "filesys/off_t.h"
 #include "devices/block.h"
 
-struct bitmap;
 
+
+
+
+struct bitmap;
+int cache_hit;
+int cache_miss;
+void reset_cache(void);
 void inode_init(void);
 bool inode_create(block_sector_t, off_t);
 struct inode *inode_open(block_sector_t);
@@ -19,5 +25,6 @@ off_t inode_write_at(struct inode *, const void *, off_t size, off_t offset);
 void inode_deny_write(struct inode *);
 void inode_allow_write(struct inode *);
 off_t inode_length(const struct inode *);
+void init_cache(void);
 
 #endif /* filesys/inode.h */
