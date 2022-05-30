@@ -612,11 +612,19 @@ off_t inode_write_at(struct inode *inode, const void *buffer_, off_t size, off_t
   uint8_t *bounce = NULL;
 
   if (inode->deny_write_cnt)
+  {
+    lock_release(&inode->operation_lock);
     return 0;
+  }
 
   if (offset + size > inode_length(inode))
+  {
     if (!inode_extend(inode, offset + size))
+    {
+      lock_release(&inode->operation_lock);
       return 0;
+    }
+  }
 
   while (size > 0)
   {
