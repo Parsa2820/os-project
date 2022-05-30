@@ -187,9 +187,7 @@ void reset_cache(void)
     struct cache_block *block = list_entry(element, struct cache_block, elem);
     if (block->dirty)
       write_to_memory(block, 0);
-    lock_acquire(&block->block_lock);
     block->sector = -1;
-    lock_release(&block->block_lock);
     element = list_prev(element);
     lock_release(&cache_list_block);
     if (is_head(element))
@@ -201,7 +199,6 @@ void reset_cache(void)
   cache_hit = 0;
 }
 
-
 void reset_counter(void)
 {
   lock_acquire(&cache_list_block);
@@ -211,7 +208,7 @@ void reset_counter(void)
   {
     lock_acquire(&cache_list_block);
     struct cache_block *block = list_entry(element, struct cache_block, elem);
-    if (block->dirty)
+    if (block->dirty && block->sector != -1)
       write_to_memory(block, 0);
     element = list_prev(element);
     lock_release(&cache_list_block);
@@ -224,6 +221,25 @@ void reset_counter(void)
   write_cnt = 0;
 }
 
+void flush_cache(struct block * fs_device_)
+{
+  lock_acquire(&cache_list_block);
+  struct list_elem *element = list_back(&cache_blocks);
+  lock_release(&cache_list_block);
+  while (1)
+  {
+    lock_acquire(&cache_list_block);
+    struct cache_block *block = list_entry(element, struct cache_block, elem);
+    if (block->dirty && block->sector != -1)
+      block_write(fs_device_, block->sector, block->data);
+    element = list_prev(element);
+    lock_release(&cache_list_block);
+    if (is_head(element))
+    {
+      break;
+    }
+  }
+}
 
 /* Identifies an inode. */
 #define INODE_MAGIC 0x494e4f44
@@ -592,7 +608,7 @@ off_t inode_read_at(struct inode *inode, void *buffer_, off_t size, off_t offset
 static bool inode_extend(struct inode *inode, off_t size)
 {
   inode_free_map_deallocate(inode);
-  
+
   if (!inode_free_map_clear_allocate(&inode->data, bytes_to_sectors(size)))
     return false;
 
@@ -682,7 +698,7 @@ off_t inode_length(const struct inode *inode)
 
 bool inode_is_dir(struct inode *inode)
 {
-  return inode->data.type==INODE_TYPE_DIRECTORY;
+  return inode->data.type == INODE_TYPE_DIRECTORY;
 }
 
 int inode_sector(struct inode *inode)

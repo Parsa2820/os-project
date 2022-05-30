@@ -6,6 +6,7 @@
 #include "filesys/free-map.h"
 #include "filesys/directory.h"
 #include "threads/synch.h"
+#include "filesys/inode.h"
 /* Partition that contains the file system. */
 struct block *fs_device;
 
@@ -34,6 +35,7 @@ void filesys_init(bool format)
 void filesys_done(void)
 {
   free_map_close();
+  flush_cache(fs_device);
 }
 
 /* Creates a file named NAME with the given INITIAL_SIZE.
@@ -101,9 +103,14 @@ filesys_open (const char *name)
    or if an internal memory allocation fails. */
 bool filesys_remove(const char *name)
 {
-  struct dir *dir = dir_open_root();
-  bool success = dir != NULL && dir_remove(dir, name);
-  dir_close(dir);
+  char directory[strlen (name) + 1];
+  char file_name[NAME_MAX + 1];
+  directory[0] = '\0';
+  file_name[0] = '\0';
+  separate_path_and_filename (name, directory, file_name);
+  struct dir *dir = dir_open_by_path (directory);
+  bool success = dir != NULL && dir_remove (dir, file_name);
+  dir_close (dir);
 
   return success;
 }
