@@ -286,30 +286,28 @@ bool dir_readdir(struct dir *dir, char name[NAME_MAX + 1])
 }
 
 static int
-get_next_part (char part[NAME_MAX + 1], const char **srcp)
+next_section (char section[NAME_MAX + 1], const char **srcptr)
 {
-  const char *src = *srcp;
-  char *dst = part;
+  const char *src = *srcptr;
+  char *destination = section;
 
-  /* Skip leading slashes. If it's all slashes, we're done. */
   while (*src == '/')
     src++;
   if (*src == '\0')
     return 0;
 
-  /* Copy up to NAME_MAX character from SRC to DST. Add null terminator. */
   while (*src != '/' && *src != '\0')
     {
-      if (dst < part + NAME_MAX)
-        *dst++ = *src;
+      if (destination < section + NAME_MAX)
+        *destination++ = *src;
       else
         return -1;
       src++;
     }
-  *dst = '\0';
+  *destination = '\0';
 
   /* Advance source pointer. */
-  *srcp = src;
+  *srcptr = src;
   return 1;
 }
 
@@ -332,7 +330,7 @@ separate_path_and_filename(const char *path, char *dir, char *file)
   token[0] = '\0';
   prev_token[0] = '\0';
 
-  while ((status = get_next_part (token, &path)) != 0)
+  while ((status = next_section (token, &path)) != 0)
     {
       if (status == -1)
         return false;
@@ -370,7 +368,7 @@ dir_open_by_path(char *name)
     cur_dir = dir_reopen(cur_thread->current_dir);
   }
   char dir_token[NAME_MAX+1];
-  while(get_next_part(dir_token, &name)){
+  while(next_section(dir_token, &name)){
     struct inode *next_inode;
     if (!dir_lookup (cur_dir, dir_token, &next_inode))
         {
