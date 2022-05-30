@@ -36,7 +36,7 @@ byte_to_sector(const struct inode *inode, off_t pos)
     return -1;
 
   size_t sector_index = pos / BLOCK_SECTOR_SIZE;
-  
+
   // Direct blocks
   if (sector_index < DIRECT_BLOCKS)
     return inode->data.data[sector_index];
@@ -66,7 +66,7 @@ byte_to_sector(const struct inode *inode, off_t pos)
     free(indirect_block);
     return sector;
   }
-  
+
   return -1;
 }
 
@@ -253,7 +253,7 @@ inode_get_inumber(const struct inode *inode)
 }
 
 /* Deallocate indirect blocks */
-void indirect_free_map_deallocate(block_sector_t indirect)
+static void indirect_free_map_deallocate(block_sector_t indirect)
 {
   if (indirect == 0)
     return;
@@ -268,7 +268,7 @@ void indirect_free_map_deallocate(block_sector_t indirect)
 }
 
 /* Deallocate INODE data. */
-void inode_free_map_deallocate(struct inode *inode)
+static void inode_free_map_deallocate(struct inode *inode)
 {
   // Direct blocks
   for (size_t i = 0; i < DIRECT_BLOCKS; i++)
@@ -309,7 +309,7 @@ void inode_close(struct inode *inode)
     if (inode->removed)
     {
       free_map_release(inode->sector, 1);
-      inode_free_map_deallocate(inode);        
+      inode_free_map_deallocate(inode);
     }
 
     free(inode);
@@ -380,6 +380,17 @@ off_t inode_read_at(struct inode *inode, void *buffer_, off_t size, off_t offset
   return bytes_read;
 }
 
+/* Extend the file size to SIZE bytes. */
+static bool inode_extend(struct inode *inode, off_t size)
+{
+  if (!inode_free_map_clear_allocate(inode, size))
+    return false;
+
+  inode->data.length = size;
+  block_write(fs_device, inode->sector, &inode->data);
+  return true;
+}
+
 /* Writes SIZE bytes from BUFFER into INODE, starting at OFFSET.
    Returns the number of bytes actually written, which may be
    less than SIZE if end of file is reached or an error occurs.
@@ -394,6 +405,10 @@ off_t inode_write_at(struct inode *inode, const void *buffer_, off_t size, off_t
 
   if (inode->deny_write_cnt)
     return 0;
+
+  if (offset + size > inode_length(inode))
+    if (!inode_extend(inode, offset + size))
+      return 0;
 
   while (size > 0)
   {
