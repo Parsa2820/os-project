@@ -8,6 +8,7 @@
     - [Buffer Cache](#buffer-cache)
     - [Extensible Files](#extensible-files)
     - [Subdirectories](#subdirectories)
+  - [Test Cases](#test-cases)
   - [Group Members Contributions](#group-members-contributions)
 
 ## Contributers
@@ -28,6 +29,8 @@
 - Structs and enums which were previously defined in `inode.c` are moved to `inode.h` in order to make them visible to other files.
 
 ### Subdirectories
+
+## Test Cases
 
 ## Group Members Contributions
 - Parsa Mohammadian: Extensible files
