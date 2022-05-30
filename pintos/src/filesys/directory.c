@@ -27,8 +27,9 @@ struct dir_entry
    given SECTOR.  Returns true if successful, false on failure. */
 bool dir_create(block_sector_t sector, size_t entry_cnt)
 {
+  return inode_create(sector, entry_cnt * sizeof(struct dir_entry), INODE_TYPE_DIRECTORY);
   bool operation_result;
-  if (!(operation_result = inode_create(sector, entry_cnt * sizeof(struct dir_entry), true)))
+  if (!(operation_result = inode_create(sector, entry_cnt * sizeof(struct dir_entry), INODE_TYPE_DIRECTORY)))
   {
     return operation_result;
   }
