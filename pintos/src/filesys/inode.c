@@ -105,9 +105,9 @@ static bool direct_free_map_clear_allocate(struct inode_disk *disk_inode, block_
 
 /* Allocate sector for indirect block and clear it.
    Return true if successful, false on failure. */
-static bool indirect_free_map_clear_allocate(struct inode_disk *disk_inode, block_sector_t *sectors)
+static bool indirect_free_map_clear_allocate_aux(block_sector_t *indirect, block_sector_t *sectors)
 {
-  if (!free_map_allocate(1, &disk_inode->indirect))
+  if (!free_map_allocate(1, indirect))
     return false;
 
   indirect_block_t *indirect_block = calloc(sizeof(indirect_block_t), 1);
@@ -116,9 +116,16 @@ static bool indirect_free_map_clear_allocate(struct inode_disk *disk_inode, bloc
     if (!free_map_allocate(1, &indirect_block->sectors[i]))
       return false;
 
-  block_write(fs_device, disk_inode->indirect, indirect_block);
+  block_write(fs_device, *indirect, indirect_block);
   free(indirect_block);
   return true;
+}
+
+/* Allocate sector for indirect block of inode_disk and clear it.
+   Return true if successful, false on failure. */
+static bool indirect_free_map_clear_allocate(struct inode_disk *disk_inode, block_sector_t *sectors)
+{
+  return indirect_free_map_clear_allocate_aux(&disk_inode->indirect, sectors);
 }
 
 /* Allocate sector for double indirect block and clear it.
@@ -131,8 +138,12 @@ static bool double_indirect_free_map_clear_allocate(struct inode_disk *disk_inod
   indirect_block_t *double_indirect_block = calloc(sizeof(indirect_block_t), 1);
 
   for (size_t i = 0; i < DOUBLE_INDIRECT_BLOCKS / INDIRECT_BLOCKS; i++)
-    if (!indirect_free_map_clear_allocate(double_indirect_block->sectors[i], sectors))
+  {
+    if (!indirect_free_map_clear_allocate_aux(&double_indirect_block->sectors[i], sectors))
       return false;
+    if (*sectors == 0)
+      break;
+  }
 
   block_write(fs_device, disk_inode->double_indirect, double_indirect_block);
   free(double_indirect_block);
@@ -382,7 +393,7 @@ off_t inode_read_at(struct inode *inode, void *buffer_, off_t size, off_t offset
 /* Extend the file size to SIZE bytes. */
 static bool inode_extend(struct inode *inode, off_t size)
 {
-  if (!inode_free_map_clear_allocate(inode, size))
+  if (!inode_free_map_clear_allocate(&inode->data, size))
     return false;
 
   inode->data.length = size;
