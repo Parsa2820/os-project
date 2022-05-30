@@ -183,6 +183,20 @@ void reset_cache()
   return syscall0(SYS_RESET_CACHE);
 }
 
+int get_write_cnt()
+{
+  return syscall0(SYS_WRITE_CNT);
+}
+
+int get_read_cnt()
+{
+  return syscall0(SYS_READ_CNT);
+}
+
+void reset_write_read_cnt()
+{
+  return syscall0(SYS_RESET_COUNTER);
+}
 void *
 sbrk(intptr_t increment)
 {

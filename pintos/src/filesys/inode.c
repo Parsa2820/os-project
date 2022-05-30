@@ -32,6 +32,8 @@ void init_cache(void)
 {
   cache_hit = 0;
   cache_miss = 0;
+  write_cnt = 0;
+  read_cnt = 0;
   list_init(&cache_blocks);
   lock_init(&cache_list_block);
   for (int i = 0; i < 64; i++)
@@ -47,32 +49,39 @@ is_head(struct list_elem *elem)
   return elem != NULL && elem->prev == NULL && elem->next != NULL;
 }
 
-static void write_to_memory(struct cache_block *block)
+static void write_to_memory(struct cache_block *block, off_t size)
 {
   lock_acquire(&block->block_lock);
   block_write(fs_device, block->sector, block->data);
   block->dirty = 0;
+  write_cnt++;
   lock_release(&block->block_lock);
 }
 
-static void *replace_block(block_sector_t sector)
+static void *replace_block(block_sector_t sector, off_t size)
 {
   lock_acquire(&cache_list_block);
   struct list_elem *element = list_front(&cache_blocks);
   struct cache_block *block_to_remove = list_entry(element, struct cache_block, elem);
+  cache_miss++;
   lock_release(&cache_list_block);
+
   if (block_to_remove->dirty == 1)
   {
-    write_to_memory(block_to_remove);
+    write_to_memory(block_to_remove, size);
   }
+
+  lock_acquire(&cache_list_block);
   block_read(fs_device, sector, block_to_remove->data);
   block_to_remove->sector = sector;
+  read_cnt++;
   list_remove(&block_to_remove->elem);
   list_push_back(&cache_blocks, &block_to_remove->elem);
+  lock_release(&cache_list_block);
   return block_to_remove;
 }
 
-static struct cache_block *find_cache_block(block_sector_t sector)
+static struct cache_block *find_cache_block(block_sector_t sector, off_t size)
 {
   lock_acquire(&cache_list_block);
   struct list_elem *element = list_back(&cache_blocks);
@@ -98,13 +107,13 @@ static struct cache_block *find_cache_block(block_sector_t sector)
   }
 
   lock_release(&cache_list_block);
-  cache_miss++;
-  return replace_block(sector);
+
+  return replace_block(sector, size);
 }
 
 static void write_cache(block_sector_t sector, void *buffer_, off_t size, off_t offset)
 {
-  struct cache_block *block = find_cache_block(sector);
+  struct cache_block *block = find_cache_block(sector, size);
   if (size > BLOCK_SECTOR_SIZE)
   {
     while (size > BLOCK_SECTOR_SIZE)
@@ -115,27 +124,33 @@ static void write_cache(block_sector_t sector, void *buffer_, off_t size, off_t 
       sector++;
       offset = 0;
       buffer_ += BLOCK_SECTOR_SIZE;
-      block = find_cache_block(sector);
+      block = find_cache_block(sector, size);
       size -= BLOCK_SECTOR_SIZE;
       lock_release(&block->block_lock);
     }
-    lock_acquire(&block->block_lock);
-    memcpy(&block->data[offset], buffer_, size);
-    block->dirty = 1;
-    lock_release(&block->block_lock);
+    if (size != 0)
+    {
+      lock_acquire(&block->block_lock);
+      memcpy(&block->data[offset], buffer_, size);
+      block->dirty = 1;
+      lock_release(&block->block_lock);
+    }
   }
   else
   {
-    lock_acquire(&(block->block_lock));
-    memcpy(&(block->data[offset]), buffer_, size);
-    block->dirty = 1;
-    lock_release(&(block->block_lock));
+    if (size != 0)
+    {
+      lock_acquire(&(block->block_lock));
+      memcpy(&(block->data[offset]), buffer_, size);
+      block->dirty = 1;
+      lock_release(&(block->block_lock));
+    }
   }
 }
 
 static void read_cache(block_sector_t sector, void *buffer_, off_t size, off_t offset)
 {
-  struct cache_block *block = find_cache_block(sector);
+  struct cache_block *block = find_cache_block(sector, size);
   if (size > BLOCK_SECTOR_SIZE)
   {
     while (size > BLOCK_SECTOR_SIZE)
@@ -145,7 +160,7 @@ static void read_cache(block_sector_t sector, void *buffer_, off_t size, off_t o
       sector++;
       offset = 0;
       buffer_ += BLOCK_SECTOR_SIZE;
-      block = find_cache_block(sector);
+      block = find_cache_block(sector, size);
       size -= BLOCK_SECTOR_SIZE;
       lock_release(&block->block_lock);
     }
@@ -171,7 +186,7 @@ void reset_cache(void)
     lock_acquire(&cache_list_block);
     struct cache_block *block = list_entry(element, struct cache_block, elem);
     if (block->dirty)
-      write_to_memory(block);
+      write_to_memory(block, 0);
     lock_acquire(&block->block_lock);
     block->sector = -1;
     lock_release(&block->block_lock);
@@ -185,6 +200,30 @@ void reset_cache(void)
   cache_miss = 0;
   cache_hit = 0;
 }
+
+
+void reset_counter(void)
+{
+  lock_acquire(&cache_list_block);
+  struct list_elem *element = list_back(&cache_blocks);
+  lock_release(&cache_list_block);
+  while (1)
+  {
+    lock_acquire(&cache_list_block);
+    struct cache_block *block = list_entry(element, struct cache_block, elem);
+    if (block->dirty)
+      write_to_memory(block, 0);
+    element = list_prev(element);
+    lock_release(&cache_list_block);
+    if (is_head(element))
+    {
+      break;
+    }
+  }
+  read_cnt = 0;
+  write_cnt = 0;
+}
+
 
 /* Identifies an inode. */
 #define INODE_MAGIC 0x494e4f44

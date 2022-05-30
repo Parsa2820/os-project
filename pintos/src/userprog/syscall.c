@@ -310,30 +310,51 @@ static void syscall_exec(struct intr_frame *f, uint32_t *args)
 
   if (is_valid_ptr(file))
   {
-    void* ph_adr = pagedir_get_page(thread_current()->pagedir, file);
-    if (is_valid_ptr(file + strlen(ph_adr))){
-        f->eax = process_execute(file);
-    }else{
+    void *ph_adr = pagedir_get_page(thread_current()->pagedir, file);
+    if (is_valid_ptr(file + strlen(ph_adr)))
+    {
+      f->eax = process_execute(file);
+    }
+    else
+    {
       f->eax = -1;
       exit_error();
     }
-  }else {
+  }
+  else
+  {
     f->eax = -1;
     exit_error();
   }
-
-  
 }
 
-static void syscall_get_cache_hit_rate(struct intr_frame *f, uint32_t *args){
+static void syscall_get_cache_hit_rate(struct intr_frame *f, uint32_t *args)
+{
   f->eax = cache_hit;
 }
 
-static void syscall_get_cache_miss_rate(struct intr_frame *f, uint32_t *args){
+static void syscall_get_cache_miss_rate(struct intr_frame *f, uint32_t *args)
+{
   f->eax = cache_miss;
 }
 
-static void syscall_reset_cache(struct intr_frame *f, uint32_t *args){
+static void syscall_get_write_cnt(struct intr_frame *f, uint32_t *args)
+{
+  f->eax = write_cnt;
+}
+
+static void syscall_get_read_cnt(struct intr_frame *f, uint32_t *args)
+{
+  f->eax = read_cnt;
+}
+
+static void syscall_reset_counter(struct intr_frame *f, uint32_t *args)
+{
+  reset_counter();
+}
+
+static void syscall_reset_cache(struct intr_frame *f, uint32_t *args)
+{
   reset_cache();
 }
 
@@ -357,6 +378,9 @@ syscall_descriptor_t syscall_table[] = {
     {SYS_CACHE_HIT, &syscall_get_cache_hit_rate, 0},
     {SYS_CACHE_MISS, &syscall_get_cache_miss_rate, 0},
     {SYS_RESET_CACHE, &syscall_reset_cache, 0},
+    {SYS_READ_CNT, &syscall_get_read_cnt, 0},
+    {SYS_WRITE_CNT, &syscall_get_write_cnt, 0},
+    {SYS_RESET_COUNTER, &syscall_reset_counter, 0},
 };
 
 static bool;
