@@ -34,7 +34,7 @@ void test_main(void)
     close(handle);
     int read_cnt = get_read_cnt();
     int write_cnt = get_write_cnt();
-    printf("\n%d %d\n", read_cnt, write_cnt);
-    
-    
+    if (write_cnt < 128 + 10 && write_cnt > 128 - 10){
+        msg("write_cnt is reasonable!");
+    }
 }
