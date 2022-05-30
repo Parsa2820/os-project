@@ -148,7 +148,6 @@ typedef bool (*free_map_clear_allocate_func)(struct inode_disk *disk_inode, bloc
 static bool inode_free_map_clear_allocate(struct inode_disk *disk_inode, size_t sectors)
 {
   ASSERT(disk_inode != NULL);
-  ASSERT(sectors > 0);
 
   static free_map_clear_allocate_func free_map_clear_allocate_funcs[] = {
       direct_free_map_clear_allocate,
