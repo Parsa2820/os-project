@@ -593,7 +593,7 @@ static bool inode_extend(struct inode *inode, off_t size)
 {
   inode_free_map_deallocate(inode);
   
-  if (!inode_free_map_clear_allocate(&inode->data, size))
+  if (!inode_free_map_clear_allocate(&inode->data, bytes_to_sectors(size)))
     return false;
 
   inode->data.length = size;
