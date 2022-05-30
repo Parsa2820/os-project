@@ -31,10 +31,43 @@ static block_sector_t
 byte_to_sector(const struct inode *inode, off_t pos)
 {
   ASSERT(inode != NULL);
-  if (pos < inode->data.length)
-    return inode->data.data[0] + pos / BLOCK_SECTOR_SIZE;
-  else
+
+  if (pos > inode->data.length)
     return -1;
+
+  size_t sector_index = pos / BLOCK_SECTOR_SIZE;
+  
+  // Direct blocks
+  if (sector_index < DIRECT_BLOCKS)
+    return inode->data.data[sector_index];
+
+  // Indirect blocks
+  sector_index -= DIRECT_BLOCKS;
+  if (sector_index < INDIRECT_BLOCKS)
+  {
+    indirect_block_t *indirect_block = calloc(1, sizeof(indirect_block_t));
+    block_read(fs_device, inode->data.indirect, indirect_block);
+    block_sector_t sector = indirect_block->sectors[sector_index];
+    free(indirect_block);
+    return sector;
+  }
+
+  // Double indirect blocks
+  sector_index -= INDIRECT_BLOCKS;
+  if (sector_index < DOUBLE_INDIRECT_BLOCKS)
+  {
+    indirect_block_t *double_indirect_block = calloc(1, sizeof(indirect_block_t));
+    block_read(fs_device, inode->data.double_indirect, double_indirect_block);
+    block_sector_t sector = double_indirect_block->sectors[sector_index / INDIRECT_BLOCKS];
+    free(double_indirect_block);
+    indirect_block_t *indirect_block = calloc(1, sizeof(indirect_block_t));
+    block_read(fs_device, sector, indirect_block);
+    sector = indirect_block->sectors[sector_index % INDIRECT_BLOCKS];
+    free(indirect_block);
+    return sector;
+  }
+  
+  return -1;
 }
 
 /* List of open inodes, so that opening a single inode twice
