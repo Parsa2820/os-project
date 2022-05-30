@@ -437,6 +437,36 @@ static void syscall_exec(struct intr_frame *f, uint32_t *args)
   }
 }
 
+static void syscall_get_cache_hit_rate(struct intr_frame *f, uint32_t *args)
+{
+  f->eax = cache_hit;
+}
+
+static void syscall_get_cache_miss_rate(struct intr_frame *f, uint32_t *args)
+{
+  f->eax = cache_miss;
+}
+
+static void syscall_get_write_cnt(struct intr_frame *f, uint32_t *args)
+{
+  f->eax = write_cnt;
+}
+
+static void syscall_get_read_cnt(struct intr_frame *f, uint32_t *args)
+{
+  f->eax = read_cnt;
+}
+
+static void syscall_reset_counter(struct intr_frame *f, uint32_t *args)
+{
+  reset_counter();
+}
+
+static void syscall_reset_cache(struct intr_frame *f, uint32_t *args)
+{
+  reset_cache();
+}
+
 syscall_descriptor_t syscall_table[] = {
 #ifdef USERPROG
     {SYS_WRITE, &syscall_write, 1},
@@ -459,6 +489,12 @@ syscall_descriptor_t syscall_table[] = {
     {SYS_HALT, &syscall_halt, 0},
     {SYS_WAIT, &syscall_wait, 0},
     {SYS_EXEC, &syscall_exec, 0},
+    {SYS_CACHE_HIT, &syscall_get_cache_hit_rate, 0},
+    {SYS_CACHE_MISS, &syscall_get_cache_miss_rate, 0},
+    {SYS_RESET_CACHE, &syscall_reset_cache, 0},
+    {SYS_READ_CNT, &syscall_get_read_cnt, 0},
+    {SYS_WRITE_CNT, &syscall_get_write_cnt, 0},
+    {SYS_RESET_COUNTER, &syscall_reset_counter, 0},
 };
 
 static bool;
@@ -496,14 +532,7 @@ syscall_handler(struct intr_frame *f UNUSED)
   {
     if (syscall_number == syscall_table[i].number)
     {
-      if (syscall_table[i].is_file_op)
-        lock_acquire(&filesys_lock);
-
       syscall_table[i].syscall_func(f, args);
-
-      if (syscall_table[i].is_file_op)
-        lock_release(&filesys_lock);
-
       return;
     }
   }

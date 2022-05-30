@@ -13,8 +13,6 @@
 /* Number of double indirect blocks. */
 #define DOUBLE_INDIRECT_BLOCKS 128 * 128
 
-struct bitmap;
-
 typedef enum
 {
   INODE_TYPE_FILE,
@@ -48,6 +46,13 @@ struct inode
   // struct condition cond;   /* Conditional variable for waiting writers. */
 };
 
+struct bitmap;
+int cache_hit;
+int cache_miss;
+void reset_counter(void);
+int write_cnt;
+int read_cnt;
+void reset_cache(void);
 void inode_init(void);
 bool inode_create(block_sector_t, off_t, inode_type_t);
 struct inode *inode_open(block_sector_t);
@@ -62,5 +67,6 @@ void inode_allow_write(struct inode *);
 off_t inode_length(const struct inode *);
 bool inode_is_dir(struct inode *);
 int inode_sector(struct inode *);
+void init_cache(void);
 
 #endif /* filesys/inode.h */

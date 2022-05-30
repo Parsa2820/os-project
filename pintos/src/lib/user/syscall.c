@@ -168,9 +168,40 @@ int inumber(int fd)
   return syscall1(SYS_INUMBER, fd);
 }
 
+int get_cache_hit()
+{
+  return syscall0(SYS_CACHE_HIT);
+}
+
+int get_cache_miss()
+{
+  return syscall0(SYS_CACHE_MISS);
+}
+
+void reset_cache()
+{
+  return syscall0(SYS_RESET_CACHE);
+}
+
+int get_write_cnt()
+{
+  return syscall0(SYS_WRITE_CNT);
+}
+
+int get_read_cnt()
+{
+  return syscall0(SYS_READ_CNT);
+}
+
+void reset_write_read_cnt()
+{
+  return syscall0(SYS_RESET_COUNTER);
+}
 void *
 sbrk(intptr_t increment)
 {
   /* Homework 5, Part B: YOUR CODE HERE */
   return NULL;
 }
+
+

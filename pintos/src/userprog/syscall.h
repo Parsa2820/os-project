@@ -8,6 +8,9 @@ void syscall_init(void);
 
 void exit_error();
 
+void reset_cache();
+int get_cache_hit();
+int get_cache_miss();
 typedef void syscall_func_t(struct intr_frame *, uint32_t *);
 
 typedef struct syscall_descriptor

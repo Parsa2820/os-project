@@ -6,7 +6,6 @@
 #include "filesys/free-map.h"
 #include "filesys/directory.h"
 #include "threads/synch.h"
-
 /* Partition that contains the file system. */
 struct block *fs_device;
 
@@ -21,13 +20,13 @@ void filesys_init(bool format)
     PANIC("No file system device found, can't initialize file system.");
 
   inode_init();
+  init_cache();
   free_map_init();
 
   if (format)
     do_format();
 
   free_map_open();
-  lock_init(&filesys_lock);  
 }
 
 /* Shuts down the file system module, writing any unwritten data

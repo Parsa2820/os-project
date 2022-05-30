@@ -21,6 +21,5 @@ bool filesys_remove(const char *name);
 
 /* File system global lock for phase 1 of the project. */
 /* This should be changed in phase 3. */
-struct lock filesys_lock;
 
 #endif /* filesys/filesys.h */
