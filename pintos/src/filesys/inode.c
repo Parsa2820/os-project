@@ -219,6 +219,44 @@ inode_get_inumber(const struct inode *inode)
   return inode->sector;
 }
 
+/* Deallocate indirect blocks */
+void indirect_free_map_deallocate(block_sector_t indirect)
+{
+  if (indirect == 0)
+    return;
+
+  indirect_block_t *indirect_block = calloc(sizeof(indirect_block_t), 1);
+  block_read(fs_device, indirect, indirect_block);
+  for (size_t i = 0; i < INDIRECT_BLOCKS; i++)
+    if (indirect_block->sectors[i] != 0)
+      free_map_release(indirect_block->sectors[i], 1);
+  free(indirect_block);
+  free_map_release(indirect, 1);
+}
+
+/* Deallocate INODE data. */
+void inode_free_map_deallocate(struct inode *inode)
+{
+  // Direct blocks
+  for (size_t i = 0; i < DIRECT_BLOCKS; i++)
+    if (inode->data.data[i] != 0)
+      free_map_release(inode->data.data[i], 1);
+
+  // Indirect blocks
+  indirect_free_map_deallocate(inode->data.indirect);
+
+  // Double indirect blocks
+  if (inode->data.double_indirect != 0)
+  {
+    indirect_block_t *double_indirect_block = calloc(sizeof(indirect_block_t), 1);
+    block_read(fs_device, inode->data.double_indirect, double_indirect_block);
+    for (size_t i = 0; i < DOUBLE_INDIRECT_BLOCKS / INDIRECT_BLOCKS; i++)
+      indirect_free_map_deallocate(double_indirect_block->sectors[i]);
+    free(double_indirect_block);
+    free_map_release(inode->data.double_indirect, 1);
+  }
+}
+
 /* Closes INODE and writes it to disk.
    If this was the last reference to INODE, frees its memory.
    If INODE was also a removed inode, frees its blocks. */
@@ -238,8 +276,7 @@ void inode_close(struct inode *inode)
     if (inode->removed)
     {
       free_map_release(inode->sector, 1);
-      free_map_release(inode->data.data[0],
-                       bytes_to_sectors(inode->data.length));
+      inode_free_map_deallocate(inode);        
     }
 
     free(inode);
