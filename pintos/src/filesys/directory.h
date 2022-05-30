@@ -20,6 +20,8 @@ struct dir *dir_open_root(void);
 struct dir *dir_reopen(struct dir *);
 void dir_close(struct dir *);
 struct inode *dir_get_inode(struct dir *);
+struct dir *dir_open_by_path(char *);
+static int get_next_part (char *, const char **);
 
 /* Reading and writing. */
 bool dir_lookup(const struct dir *, const char *name, struct inode **);
