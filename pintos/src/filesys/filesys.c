@@ -4,7 +4,6 @@
 #include <string.h>
 #include "filesys/file.h"
 #include "filesys/free-map.h"
-#include "filesys/inode.h"
 #include "filesys/directory.h"
 #include "threads/synch.h"
 /* Partition that contains the file system. */
@@ -41,11 +40,11 @@ void filesys_done(void)
    Returns true if successful, false otherwise.
    Fails if a file named NAME already exists,
    or if internal memory allocation fails. */
-bool filesys_create(const char *name, off_t initial_size)
+bool filesys_create(const char *name, off_t initial_size, inode_type_t type)
 {
   block_sector_t inode_sector = 0;
   struct dir *dir = dir_open_root();
-  bool success = (dir != NULL && free_map_allocate(1, &inode_sector) && inode_create(inode_sector, initial_size) && dir_add(dir, name, inode_sector));
+  bool success = (dir != NULL && free_map_allocate(1, &inode_sector) && inode_create(inode_sector, initial_size, type) && dir_add(dir, name, inode_sector, INODE_TYPE_FILE));
   if (!success && inode_sector != 0)
     free_map_release(inode_sector, 1);
   dir_close(dir);

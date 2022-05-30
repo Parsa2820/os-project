@@ -4,6 +4,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 #include "devices/block.h"
+#include "inode.h"
 
 /* Maximum length of a file name component.
    This is the traditional UNIX maximum length.
@@ -20,10 +21,12 @@ struct dir *dir_open_root(void);
 struct dir *dir_reopen(struct dir *);
 void dir_close(struct dir *);
 struct inode *dir_get_inode(struct dir *);
+struct dir *dir_open_by_path(char *);
+static int get_next_part (char *, const char **);
 
 /* Reading and writing. */
 bool dir_lookup(const struct dir *, const char *name, struct inode **);
-bool dir_add(struct dir *, const char *name, block_sector_t);
+bool dir_add(struct dir *, const char *name, block_sector_t, inode_type_t);
 bool dir_remove(struct dir *, const char *name);
 bool dir_readdir(struct dir *, char name[NAME_MAX + 1]);
 

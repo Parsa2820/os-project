@@ -35,6 +35,7 @@ typedef struct file_descriptor
    int fileno;
    /* list node */
    struct list_elem elem;
+   struct dir *dir;
 } file_descriptor_t;
 
 typedef struct thread_wait_info
@@ -114,13 +115,16 @@ struct thread
    int priority;              /* Priority. */
    struct list_elem allelem;  /* List element for all threads list. */
 
+   struct dir *current_dir;       /* is used to address the relative addressing mode */
+
    /* Shared between thread.c and synch.c. */
    struct list_elem elem; /* List element. */
 
    thread_wait_info_t *wait_info;
+   
 #ifdef USERPROG
    /* Owned by userprog/process.c. */
-   uint32_t *pagedir; /* Page directory. */
+   uint32_t *pagedir;  /* Page directory. */
    /* Last used fileno */
    int last_fileno;
    /* File descriptor of the current thread stored as a doubly linked list */
