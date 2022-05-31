@@ -325,41 +325,36 @@ next_section(char section[NAME_MAX + 1], const char **srcptr)
 
 bool separate_path_and_filename(const char *path, char *dir, char *file)
 {
-  if (!path[0])
-  {
+  if (path[0] == '\0')
     return false;
-  }
-
-  if (path[0] == '/')
-  {
-    *dir = '/';
-    dir++;
-  }
 
   int status;
-  char token[NAME_MAX + 1], prev_token[NAME_MAX + 1];
-  token[0] = '\0';
-  prev_token[0] = '\0';
+  char token[NAME_MAX + 1] = "";
+  char prev_token[NAME_MAX + 1] = "";
 
-  while ((status = next_section(token, &path)) != 0)
+  if (path[0] == '/')
+    *(dir++) = path[0];
+
+  while (status = next_section(token, &path))
   {
     if (status == -1)
       return false;
 
-    int prev_length = strlen(prev_token);
+    size_t prev_length = strlen(prev_token);
+
     if (prev_length > 0)
     {
       memcpy(dir, prev_token, sizeof(char) * prev_length);
       dir[prev_length] = '/';
       dir += prev_length + 1;
     }
+
     memcpy(prev_token, token, sizeof(char) * strlen(token));
     prev_token[strlen(token)] = '\0';
   }
 
   *dir = '\0';
   memcpy(file, token, sizeof(char) * (strlen(token) + 1));
-
   return true;
 }
 
@@ -378,7 +373,7 @@ dir_open_by_path(char *name)
   for (struct dir *next_dir; next_section(dir_token, &name); cur_dir = next_dir)
   {
     struct inode *next_inode;
-    
+
     if ((!dir_lookup(cur_dir, dir_token, &next_inode)) || (!(next_dir = dir_open(next_inode))))
     {
       dir_close(cur_dir);
