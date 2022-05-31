@@ -27,22 +27,23 @@ struct dir_entry
    given SECTOR.  Returns true if successful, false on failure. */
 bool dir_create(block_sector_t sector, size_t entry_cnt)
 {
-  //return inode_create(sector, entry_cnt * sizeof(struct dir_entry), INODE_TYPE_DIRECTORY);
+  // return inode_create(sector, entry_cnt * sizeof(struct dir_entry), INODE_TYPE_DIRECTORY);
   bool operation_result = inode_create(sector, entry_cnt * sizeof(struct dir_entry), INODE_TYPE_DIRECTORY);
-  if (operation_result){
-    struct dir *cur_dir = dir_open (inode_open (sector));
-      struct dir_entry entry;
-      entry.inode_sector = sector;
-      entry.in_use = false;
+  if (operation_result)
+  {
+    struct dir *cur_dir = dir_open(inode_open(sector));
+    struct dir_entry entry;
+    entry.inode_sector = sector;
+    entry.in_use = false;
 
-      /* Acquire dir lock */
-      dir_acquire_lock (cur_dir);
-      if (inode_write_at (dir_get_inode (cur_dir), &entry, sizeof (entry), 0) != sizeof (entry))
-        operation_result = false;
+    /* Acquire dir lock */
+    dir_acquire_lock(cur_dir);
+    if (inode_write_at(dir_get_inode(cur_dir), &entry, sizeof(entry), 0) != sizeof(entry))
+      operation_result = false;
 
-      /* Release dir lock */
-      dir_release_lock (cur_dir);
-      dir_close (cur_dir);
+    /* Release dir lock */
+    dir_release_lock(cur_dir);
+    dir_close(cur_dir);
   }
   return operation_result;
 }
@@ -55,7 +56,7 @@ dir_open(struct inode *inode)
   struct dir *dir = calloc(1, sizeof *dir);
   if (inode && dir)
   {
-    lock_init (&dir->dir_lock);
+    lock_init(&dir->dir_lock);
     dir->inode = inode;
     dir->pos = 0;
     return dir;
@@ -140,7 +141,7 @@ bool dir_lookup(const struct dir *dir, const char *name,
 
   ASSERT(dir != NULL);
   ASSERT(name != NULL);
-  
+
   if (lookup(dir, name, &e, NULL))
     *inode = inode_open(e.inode_sector);
   else if (strcmp(name, ".") == 0)
@@ -184,28 +185,28 @@ bool dir_add(struct dir *dir, const char *name, block_sector_t inode_sector, ino
     goto done;
 
   if (type == INODE_TYPE_DIRECTORY)
-    {
-      struct dir *current_dir = dir_open (inode_open (inode_sector));
-      if (current_dir == NULL)
-        goto done;
+  {
+    struct dir *current_dir = dir_open(inode_open(inode_sector));
+    if (current_dir == NULL)
+      goto done;
 
-      // Acquire the lock
-      dir_acquire_lock (current_dir);
+    // Acquire the lock
+    dir_acquire_lock(current_dir);
 
-      bool written = true;
-      struct dir_entry e_prime;
-      e_prime.in_use = false;
-      e_prime.inode_sector = inode_get_inumber (dir_get_inode (dir));
-      if (inode_write_at (current_dir->inode, &e_prime, sizeof e_prime, 0) != sizeof e_prime)
-        written = false;
+    bool written = true;
+    struct dir_entry e_prime;
+    e_prime.in_use = false;
+    e_prime.inode_sector = inode_get_inumber(dir_get_inode(dir));
+    if (inode_write_at(current_dir->inode, &e_prime, sizeof e_prime, 0) != sizeof e_prime)
+      written = false;
 
-      // Release the lock
-      dir_release_lock (current_dir);
-      dir_close (current_dir);
+    // Release the lock
+    dir_release_lock(current_dir);
+    dir_close(current_dir);
 
-      if (!written)
-        goto done;
-    }
+    if (!written)
+      goto done;
+  }
 
   /* Set OFS to offset of free slot.
      If there are no free slots, then it will be set to the
@@ -225,7 +226,7 @@ bool dir_add(struct dir *dir, const char *name, block_sector_t inode_sector, ino
   e.inode_sector = inode_sector;
   success = inode_write_at(dir->inode, &e, sizeof e, ofs) == sizeof e;
 
-//release directory lock and declare success
+// release directory lock and declare success
 done:
   dir_release_lock(dir);
   return success;
@@ -267,7 +268,6 @@ done:
   return success;
 }
 
-
 /* Reads the next directory entry in DIR and stores the name in
    NAME.  Returns true if successful, false if the directory
    contains no more entries. */
@@ -288,7 +288,7 @@ bool dir_readdir(struct dir *dir, char name[NAME_MAX + 1])
 }
 
 static int
-next_section (char section[NAME_MAX + 1], const char **srcptr)
+next_section(char section[NAME_MAX + 1], const char **srcptr)
 {
   const char *src = *srcptr;
   int src_ofs = 0;
@@ -305,27 +305,25 @@ next_section (char section[NAME_MAX + 1], const char **srcptr)
 
   char *destination = section;
   while (*src)
+  {
+    if (*src == '/')
+      break;
+    if (destination < section + NAME_MAX)
     {
-      if (*src == '/')
-        break;
-      if (destination < section + NAME_MAX)
-      {
-        *destination = *src;
-        destination++;
-        src++;
-      }
-      else
-        return -1;
+      *destination = *src;
+      destination++;
+      src++;
     }
+    else
+      return -1;
+  }
 
   *destination = '\0';
   *srcptr = src;
   return 1;
 }
 
-
-bool
-separate_path_and_filename(const char *path, char *dir, char *file)
+bool separate_path_and_filename(const char *path, char *dir, char *file)
 {
   if (!path[0])
   {
@@ -337,82 +335,72 @@ separate_path_and_filename(const char *path, char *dir, char *file)
     *dir = '/';
     dir++;
   }
-  
+
   int status;
   char token[NAME_MAX + 1], prev_token[NAME_MAX + 1];
   token[0] = '\0';
   prev_token[0] = '\0';
 
-  while ((status = next_section (token, &path)) != 0)
-    {
-      if (status == -1)
-        return false;
+  while ((status = next_section(token, &path)) != 0)
+  {
+    if (status == -1)
+      return false;
 
-      int prev_length = strlen (prev_token);
-      if (prev_length > 0)
-        {
-          memcpy (dir, prev_token, sizeof (char) * prev_length);
-          dir[prev_length] = '/';
-          dir += prev_length + 1;
-        }
-      memcpy (prev_token, token, sizeof (char) * strlen (token));
-      prev_token[strlen (token)] = '\0';
+    int prev_length = strlen(prev_token);
+    if (prev_length > 0)
+    {
+      memcpy(dir, prev_token, sizeof(char) * prev_length);
+      dir[prev_length] = '/';
+      dir += prev_length + 1;
     }
+    memcpy(prev_token, token, sizeof(char) * strlen(token));
+    prev_token[strlen(token)] = '\0';
+  }
 
   *dir = '\0';
-  memcpy (file, token, sizeof (char) * (strlen (token) + 1));
+  memcpy(file, token, sizeof(char) * (strlen(token) + 1));
 
   return true;
+}
+
+bool is_absolute_path(const char *path)
+{
+  return path[0] == '/';
 }
 
 struct dir *
 dir_open_by_path(char *name)
 {
-  struct dir *cur_dir;
   struct thread *cur_thread = thread_current();
-  //absolute path
-  if(!cur_thread->current_dir || name[0] == '/')
+  struct dir *cur_dir = !cur_thread->current_dir || is_absolute_path(name) ? dir_open_root() : dir_reopen(cur_thread->current_dir);
+  char dir_token[NAME_MAX + 1];
+
+  for (struct dir *next_dir; next_section(dir_token, &name); cur_dir = next_dir)
   {
-    cur_dir = dir_open_root();
-  }
-  // relative path
-  else
-  {
-    cur_dir = dir_reopen(cur_thread->current_dir);
-  }
-  char dir_token[NAME_MAX+1];
-  while(next_section(dir_token, &name)){
     struct inode *next_inode;
-    if (!dir_lookup (cur_dir, dir_token, &next_inode))
-        {
-          dir_close (cur_dir);
-          return NULL;
-        }
-    struct dir *next_dir = dir_open(next_inode);
+    
+    if ((!dir_lookup(cur_dir, dir_token, &next_inode)) || (!(next_dir = dir_open(next_inode))))
+    {
+      dir_close(cur_dir);
+      return NULL;
+    }
 
     dir_close(cur_dir);
-    if (!next_dir){
-      return false;
-    }
-    cur_dir = next_dir;
   }
 
-  if (!dir_get_inode(cur_dir)->removed){
+  if (!dir_get_inode(cur_dir)->removed)
     return cur_dir;
-  }
+
   dir_close(cur_dir);
   return NULL;
 }
 
-void
-dir_release_lock (struct dir *dir)
+void dir_release_lock(struct dir *dir)
 {
-  lock_release (&(dir->dir_lock));
+  lock_release(&(dir->dir_lock));
 }
 
-void
-dir_acquire_lock (struct dir *dir)
+void dir_acquire_lock(struct dir *dir)
 {
-  lock_acquire (&(dir->dir_lock));
+  lock_acquire(&(dir->dir_lock));
 }
-
