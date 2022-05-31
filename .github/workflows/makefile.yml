@@ -18,7 +18,7 @@ jobs:
       run: cd pintos/src/filesys/
       
     - name: Test path
-    - run: ls
+      run: ls
       
     - name: Install dependencies
       run: make
