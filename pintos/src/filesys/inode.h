@@ -50,6 +50,7 @@ struct bitmap;
 int cache_hit;
 int cache_miss;
 void reset_counter(void);
+void flush_cache(struct block *);
 int write_cnt;
 int read_cnt;
 void reset_cache(void);

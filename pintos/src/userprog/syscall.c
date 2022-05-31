@@ -116,10 +116,16 @@ static void syscall_write(struct intr_frame *f, uint32_t *args)
     f->eax = size;
     return;
   }
-
+  
   file_descriptor_t *file_descriptor = find_file_descriptor(fd);
 
   if (file_descriptor == NULL)
+  {
+    f->eax = -1;
+    exit_error();
+  }
+
+  if (file_descriptor->dir != NULL)
   {
     f->eax = -1;
     exit_error();
@@ -186,10 +192,12 @@ static void syscall_open(struct intr_frame *f, uint32_t *args)
 
   int fd = fileno;
   struct inode *inode = file_get_inode(opened_file);
-  // if(inode && inode->data.type == INODE_TYPE_DIRECTORY)
-  // {
-  //   find_file_descriptor = dir_open(inode_reopen(inode)); //todo
-  // }
+  if(inode && inode->data.type && inode->data.type == INODE_TYPE_DIRECTORY)
+  {
+    file_descriptor ->dir = dir_open(inode_reopen(inode)); //todo
+  }else{
+    file_descriptor ->dir = NULL;
+  }
   f->eax = fd;
 }
 
