@@ -17,6 +17,9 @@ jobs:
     - name: configure
       run: cd pintos/src/filesys/
       
+    - name: Test path
+    - run: ls
+      
     - name: Install dependencies
       run: make
       
