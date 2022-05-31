@@ -25,42 +25,45 @@ debugpintos or deb or target remote localhost:1234
 ```
 
 ## Phase 3 Tests
-- [ ] tests/filesys/base/lg-create
-- [ ] tests/filesys/base/lg-full
-- [ ] tests/filesys/base/lg-random
-- [ ] tests/filesys/base/lg-seq-block
-- [ ] tests/filesys/base/lg-seq-random
-- [ ] tests/filesys/base/sm-create
-- [ ] tests/filesys/base/sm-full
-- [ ] tests/filesys/base/sm-random
-- [ ] tests/filesys/base/sm-seq-block
-- [ ] tests/filesys/base/sm-seq-random
+- [x] tests/filesys/base/lg-create
+- [x] tests/filesys/base/lg-full
+- [x] tests/filesys/base/lg-random
+- [x] tests/filesys/base/lg-seq-block
+- [x] tests/filesys/base/lg-seq-random
+- [x] tests/filesys/base/sm-create
+- [x] tests/filesys/base/sm-full
+- [x] tests/filesys/base/sm-random
+- [x] tests/filesys/base/sm-seq-block
+- [x] tests/filesys/base/sm-seq-random
 - [ ] tests/filesys/base/syn-read
-- [ ] tests/filesys/base/syn-remove
+- [x] tests/filesys/base/syn-remove
 - [ ] tests/filesys/base/syn-write
-- [ ] tests/filesys/extended/dir-empty-name
-- [ ] tests/filesys/extended/dir-mk-tree
-- [ ] tests/filesys/extended/dir-mkdir
-- [ ] tests/filesys/extended/dir-open
-- [ ] tests/filesys/extended/dir-over-file
+- [x] tests/filesys/extended/block-counter
+- [x] tests/filesys/extended/dir-empty-name
+- [x] tests/filesys/extended/dir-mk-tree
+- [x] tests/filesys/extended/dir-mkdir
+- [x] tests/filesys/extended/dir-open
+- [x] tests/filesys/extended/dir-over-file
 - [ ] tests/filesys/extended/dir-rm-cwd
 - [ ] tests/filesys/extended/dir-rm-parent
-- [ ] tests/filesys/extended/dir-rm-root
-- [ ] tests/filesys/extended/dir-rm-tree
+- [x] tests/filesys/extended/dir-rm-root
+- [x] tests/filesys/extended/dir-rm-tree
 - [ ] tests/filesys/extended/dir-rmdir
-- [ ] tests/filesys/extended/dir-under-file
+- [x] tests/filesys/extended/dir-under-file
 - [ ] tests/filesys/extended/dir-vine
-- [ ] tests/filesys/extended/grow-create
-- [ ] tests/filesys/extended/grow-dir-lg
-- [ ] tests/filesys/extended/grow-file-size
-- [ ] tests/filesys/extended/grow-root-lg
-- [ ] tests/filesys/extended/grow-root-sm
+- [x] tests/filesys/extended/grow-create
+- [x] tests/filesys/extended/grow-dir-lg
+- [x] tests/filesys/extended/grow-file-size
+- [x] tests/filesys/extended/grow-root-lg
+- [x] tests/filesys/extended/grow-root-sm
 - [ ] tests/filesys/extended/grow-seq-lg
-- [ ] tests/filesys/extended/grow-seq-sm
-- [ ] tests/filesys/extended/grow-sparse
-- [ ] tests/filesys/extended/grow-tell
-- [ ] tests/filesys/extended/grow-two-files
+- [x] tests/filesys/extended/grow-seq-sm
+- [x] tests/filesys/extended/grow-sparse
+- [x] tests/filesys/extended/grow-tell
+- [x] tests/filesys/extended/grow-two-files
 - [ ] tests/filesys/extended/syn-rw
+- [x] tests/filesys/extended/hit-rate
+- [ ] tests/filesys/extended/block-counter-persistence
 - [ ] tests/filesys/extended/dir-empty-name-persistence
 - [ ] tests/filesys/extended/dir-mk-tree-persistence
 - [ ] tests/filesys/extended/dir-mkdir-persistence
@@ -84,3 +87,4 @@ debugpintos or deb or target remote localhost:1234
 - [ ] tests/filesys/extended/grow-tell-persistence
 - [ ] tests/filesys/extended/grow-two-files-persistence
 - [ ] tests/filesys/extended/syn-rw-persistence
+- [ ] tests/filesys/extended/hit-rate-persistence
