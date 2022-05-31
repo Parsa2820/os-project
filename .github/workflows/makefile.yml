@@ -20,11 +20,7 @@ jobs:
       
     - name: Install dependencies
       working-directory: pintos/src/filesys/
-      run: make
-      
-    - name: Run check
-      working-directory: pintos/src/filesys/
-      run: make check
+      run: make && make check
       
 #     - name: Run distcheck
 #       run: make distcheck
