@@ -53,11 +53,11 @@ struct dir *
 dir_open(struct inode *inode)
 {
   struct dir *dir = calloc(1, sizeof *dir);
-  if (inode != NULL && dir != NULL)
+  if (inode && dir)
   {
+    lock_init (&dir->dir_lock);
     dir->inode = inode;
     dir->pos = 0;
-    lock_init (&dir->dir_lock);
     return dir;
   }
   else
@@ -175,37 +175,38 @@ bool dir_add(struct dir *dir, const char *name, block_sector_t inode_sector, ino
 
   dir_acquire_lock(dir);
 
-  /* Check NAME for validity. */
+  // is name valid or not; must not exceed size limit nor be NULL
   if (*name == '\0' || strlen(name) > NAME_MAX)
-    goto done;
+    return false;
 
-  /* Check that NAME is not in use. */
+  // check uniqueness
   if (lookup(dir, name, NULL, NULL))
     goto done;
 
   if (type == INODE_TYPE_DIRECTORY)
     {
-      bool parent_success = true;
-      struct dir_entry e_;
-      struct dir *curr_dir = dir_open (inode_open (inode_sector));
-      if (curr_dir == NULL)
+      struct dir *current_dir = dir_open (inode_open (inode_sector));
+      if (current_dir == NULL)
         goto done;
 
-      // Acquire curr_dir lock. 
-      dir_acquire_lock (curr_dir);
+      // Acquire the lock
+      dir_acquire_lock (current_dir);
 
-      e_.in_use = false;
-      e_.inode_sector = inode_get_inumber (dir_get_inode (dir));
-      if (inode_write_at (curr_dir->inode, &e_, sizeof e_, 0) != sizeof e_)
-        parent_success = false;
+      bool written = true;
+      struct dir_entry e_prime;
+      e_prime.in_use = false;
+      e_prime.inode_sector = inode_get_inumber (dir_get_inode (dir));
+      if (inode_write_at (current_dir->inode, &e_prime, sizeof e_prime, 0) != sizeof e_prime)
+        written = false;
 
-      // Release curr_dir lock. 
-      dir_release_lock (curr_dir);
-      dir_close (curr_dir);
+      // Release the lock
+      dir_release_lock (current_dir);
+      dir_close (current_dir);
 
-      if (!parent_success)
+      if (!written)
         goto done;
     }
+
   /* Set OFS to offset of free slot.
      If there are no free slots, then it will be set to the
      current end-of-file.
@@ -224,6 +225,7 @@ bool dir_add(struct dir *dir, const char *name, block_sector_t inode_sector, ino
   e.inode_sector = inode_sector;
   success = inode_write_at(dir->inode, &e, sizeof e, ofs) == sizeof e;
 
+//release directory lock and declare success
 done:
   dir_release_lock(dir);
   return success;
@@ -289,24 +291,34 @@ static int
 next_section (char section[NAME_MAX + 1], const char **srcptr)
 {
   const char *src = *srcptr;
-  char *destination = section;
+  int src_ofs = 0;
 
-  while (*src == '/')
-    src++;
-  if (*src == '\0')
+  while (src_ofs < NAME_MAX + 1 && *(src + src_ofs) == '/')
+    src_ofs++;
+  if (!*(src + src_ofs))
     return 0;
 
-  while (*src != '/' && *src != '\0')
+  src += src_ofs;
+
+  if (src_ofs >= NAME_MAX)
+    return -1;
+
+  char *destination = section;
+  while (*src)
     {
+      if (*src == '/')
+        break;
       if (destination < section + NAME_MAX)
-        *destination++ = *src;
+      {
+        *destination = *src;
+        destination++;
+        src++;
+      }
       else
         return -1;
-      src++;
     }
-  *destination = '\0';
 
-  /* Advance source pointer. */
+  *destination = '\0';
   *srcptr = src;
   return 1;
 }
@@ -315,14 +327,15 @@ next_section (char section[NAME_MAX + 1], const char **srcptr)
 bool
 separate_path_and_filename(const char *path, char *dir, char *file)
 {
-  if (path[0] == '\0')
+  if (!path[0])
   {
     return false;
   }
 
   if (path[0] == '/')
   {
-    *dir++ = '/';
+    *dir = '/';
+    dir++;
   }
   
   int status;
@@ -391,7 +404,6 @@ dir_open_by_path(char *name)
   return NULL;
 }
 
-/* Release the lock of DIR. */
 void
 dir_release_lock (struct dir *dir)
 {
