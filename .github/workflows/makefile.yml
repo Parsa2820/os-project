@@ -18,9 +18,6 @@ jobs:
       working-directory: pintos/src/filesys/
       run: ls
       
-    - name: Install dependencies
-      working-directory: pintos/src/filesys/
-      run: make && make check
+    - name: Build and run tests
+      run: cd pintos/src/filesys/ && make && make check
       
-#     - name: Run distcheck
-#       run: make distcheck
