@@ -13,18 +13,18 @@ jobs:
 
     steps:
     - uses: actions/checkout@v3
-    
-    - name: configure
-      run: cd pintos/src/filesys/
       
     - name: Test path
+      working-directory: pintos/src/filesys/
       run: ls
       
     - name: Install dependencies
+      working-directory: pintos/src/filesys/
       run: make
       
     - name: Run check
+      working-directory: pintos/src/filesys/
       run: make check
       
-    - name: Run distcheck
-      run: make distcheck
+#     - name: Run distcheck
+#       run: make distcheck
